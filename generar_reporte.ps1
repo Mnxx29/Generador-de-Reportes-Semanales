@@ -243,8 +243,167 @@ if (Test-Path $logoPath) {
 }
 
 # Formatear Fecha de Actualización
+$mesesDict = @{ "01"="Enero"; "02"="Febrero"; "03"="Marzo"; "04"="Abril"; "05"="Mayo"; "06"="Junio"; "07"="Julio"; "08"="Agosto"; "09"="Septiembre"; "10"="Octubre"; "11"="Noviembre"; "12"="Diciembre" }
 $fechaActualizado = "21 de Agosto de 2026"
-if ($fechaPestana -eq "14-08-26" -or $fechaPestana -eq "14-08-2026") { $fechaActualizado = "14 de Agosto de 2026" }
+if ($fechaPestana -match "^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$") {
+    $diaStr = $Matches[1]
+    $mNumStr = $Matches[2].PadLeft(2, '0')
+    $anioStr = $Matches[3]
+    if ($anioStr.Length -eq 2) { $anioStr = "20$anioStr" }
+    if ($mesesDict.ContainsKey($mNumStr)) {
+        $fechaActualizado = "$diaStr de $($mesesDict[$mNumStr]) de $anioStr"
+    }
+}
+
+# ==================================================
+# Sincronización Automática con reporte_semanal.html (Live Server)
+# ==================================================
+$reporteHtmlPath = Join-Path $workingDir "reporte_semanal.html"
+if (Test-Path $reporteHtmlPath) {
+    try {
+        $htmlContent = [System.IO.File]::ReadAllText($reporteHtmlPath, [System.Text.Encoding]::UTF8)
+
+        # 1. Construir JS Array de Centros
+        $jsCentrosItems = @()
+        foreach ($cItem in $centrosList) {
+            $cNameEsc = $cItem.Centro.Replace("'", "\'")
+            $cRegEsc = $cItem.Region.Replace("'", "\'")
+            $cObsEsc = $cItem.Observaciones.Replace("'", "\'")
+            $jsCentrosItems += "      { centro: '$cNameEsc', reg: '$cRegEsc', jaulas: $($cItem.Jaulas), camaras: $($cItem.Camaras), obs: '$cObsEsc' }"
+        }
+        $jsDataArrayStr = "const data$Empresa = [`n" + ($jsCentrosItems -join ",\n") + "`n    ];"
+        $patternArray = "(?s)const data$Empresa = \[.*?\];"
+        $htmlContent = [regex]::Replace($htmlContent, $patternArray, $jsDataArrayStr)
+
+        # 2. Construir JS Array Regional
+        $regionalJsItems = @()
+        foreach ($rKey in $regiones.Keys | Sort-Object) {
+            $rData = $regiones[$rKey]
+            $rFunc = 100.00
+            if ($rData.Camaras -gt 0) {
+                $rFunc = [Math]::Round(((($rData.Camaras - $rData.SinVisual - $rData.MortSinVisual) / $rData.Camaras) * 100), 2)
+            }
+            $rFuncStr = "{0:N2}%" -f $rFunc
+            if ($Empresa -eq "Cermaq") {
+                $regionalJsItems += "          { reg: '$rKey', centros: $($rData.Centros), jaulas: $($rData.Jaulas), camaras: $($rData.Camaras), fallas: $($rData.SinVisual), mortFallas: $($rData.MortSinVisual), func: '$rFuncStr' }"
+            } else {
+                $regionalJsItems += "          { reg: '$rKey', centros: $($rData.Centros), jaulas: $($rData.Jaulas), camaras: $($rData.Camaras), fallas: $($rData.SinVisual), func: '$rFuncStr' }"
+            }
+        }
+        $regionalJsStr = "[\n" + ($regionalJsItems -join ",\n") + "\n        ]"
+
+        $totalOperativas = $totalCamaras - $totalSinVisual - $totalMortSinVisual
+
+        # 3. Actualizar bloque switchCompany en JS
+        if ($Empresa -eq "Cermaq") {
+            $switchBlock = @"
+      } else if (company === 'cermaq') {
+        document.title = 'Reporte Cermaq 2026 Semana $semanaNum';
+        header1.classList.add('cermaq');
+        header2.classList.add('cermaq');
+        logoCer1.style.display = 'block';
+        logoCer2.style.display = 'block';
+        title1.innerHTML = 'CERMAQ &bull; REPORTE SEMANAL';
+        title2.innerHTML = 'CERMAQ &bull; DETALLE OPERATIVO & INSIGHTS';
+        footer1.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2';
+        footer2.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2';
+        dateText.innerHTML = 'Actualizado: $fechaActualizado';
+        
+        tableHeaderReg.innerHTML = `
+          <tr>
+            <th>Regi&oacute;n</th>
+            <th>Centros</th>
+            <th>Jaulas</th>
+            <th>Total C&aacute;maras</th>
+            <th>C&aacute;m. Est&aacute;ndar (Falla)</th>
+            <th>C&aacute;m. Mortalidad (Falla)</th>
+            <th>Funcionamiento</th>
+          </tr>`;
+
+        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, true);
+
+        document.getElementById('donutPercent').innerText = '$funcGlobalStr';
+        document.getElementById('donutOpText').innerText = 'Operativas ($totalOperativas)';
+        document.getElementById('donutFailText').innerText = 'Sin Visual ($($totalSinVisual + $totalMortSinVisual))';
+
+        renderCentersTable(dataCermaq);
+"@
+            $patternSwitch = "(?s)\} else if \(company === 'cermaq'\) \{.*?\n        renderCentersTable\(dataCermaq\);\n      \}"
+            $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, $switchBlock)
+        } elseif ($Empresa -eq "Camanchaca") {
+            $switchBlock = @"
+      if (company === 'camanchaca') {
+        document.title = 'Reporte Camanchaca 2026 Semana $semanaNum';
+        logoCam1.style.display = 'block';
+        logoCam2.style.display = 'block';
+        title1.innerHTML = 'CAMANCHACA &bull; REPORTE SEMANAL';
+        title2.innerHTML = 'CAMANCHACA &bull; DETALLE OPERATIVO & INSIGHTS';
+        footer1.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2';
+        footer2.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2';
+        dateText.innerHTML = 'Actualizado: $fechaActualizado';
+        
+        tableHeaderReg.innerHTML = `
+          <tr>
+            <th>Regi&oacute;n</th>
+            <th>Centros</th>
+            <th>Jaulas</th>
+            <th>Total C&aacute;maras</th>
+            <th>C&aacute;maras (Sin Visual)</th>
+            <th>Funcionamiento</th>
+          </tr>`;
+
+        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, false);
+
+        document.getElementById('donutPercent').innerText = '$funcGlobalStr';
+        document.getElementById('donutOpText').innerText = 'Operativas ($totalOperativas)';
+        document.getElementById('donutFailText').innerText = 'Sin Visual ($totalSinVisual)';
+
+        renderCentersTable(dataCamanchaca);
+"@
+            $patternSwitch = "(?s)if \(company === 'camanchaca'\) \{.*?\n        renderCentersTable\(dataCamanchaca\);\n      \}"
+            $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, $switchBlock)
+        } elseif ($Empresa -eq "Mowi") {
+            $switchBlock = @"
+      } else if (company === 'mowi') {
+        document.title = 'Reporte Mowi 2026 Semana $semanaNum';
+        header1.classList.add('mowi');
+        header2.classList.add('mowi');
+        logoMow1.style.display = 'block';
+        logoMow2.style.display = 'block';
+        title1.innerHTML = 'MOWI &bull; REPORTE SEMANAL';
+        title2.innerHTML = 'MOWI &bull; DETALLE OPERATIVO & INSIGHTS';
+        footer1.innerHTML = 'Reporte MOWI 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2';
+        footer2.innerHTML = 'Reporte MOWI 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2';
+        dateText.innerHTML = 'Actualizado: $fechaActualizado';
+        
+        tableHeaderReg.innerHTML = `
+          <tr>
+            <th>Regi&oacute;n</th>
+            <th>Centros</th>
+            <th>Jaulas</th>
+            <th>Total C&aacute;maras</th>
+            <th>C&aacute;maras (Sin Visual)</th>
+            <th>Funcionamiento</th>
+          </tr>`;
+
+        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, false);
+
+        document.getElementById('donutPercent').innerText = '$funcGlobalStr';
+        document.getElementById('donutOpText').innerText = 'Operativas ($totalOperativas)';
+        document.getElementById('donutFailText').innerText = 'Sin Visual ($totalSinVisual)';
+
+        renderCentersTable(dataMowi);
+"@
+            $patternSwitch = "(?s)\} else if \(company === 'mowi'\) \{.*?\n        renderCentersTable\(dataMowi\);\n      \}"
+            $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, $switchBlock)
+        }
+
+        [System.IO.File]::WriteAllText($reporteHtmlPath, $htmlContent, [System.Text.Encoding]::UTF8)
+        Write-Host "Vista previa HTML (reporte_semanal.html) actualizada automáticamente para $Empresa."
+    } catch {
+        Write-Host "Aviso: No se pudo actualizar reporte_semanal.html: $_"
+    }
+}
 
 # Filas de la tabla por región
 $tableRowsHtml = ""
