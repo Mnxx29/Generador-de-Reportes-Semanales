@@ -807,21 +807,27 @@ $htmlTemplate = @"
 
   <div style="display: flex; gap: 10px; margin-bottom: 12px;">
     <div style="flex: 1; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 10px;">
-      <div style="font-size: 20px;">📡</div>
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1.7 15.9 1.7 10.8 4.9 7.6"/><path d="M7.8 16.2c-1.6-1.6-1.6-4.1 0-5.7"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c1.6 1.6 1.6 4.1 0 5.7"/><path d="M19.1 4.9c3.2 3.2 3.2 8.3 0 11.5"/></svg>
+      </div>
       <div>
         <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Conectividad Remota</div>
         <div style="font-size: 12px; font-weight: 700; color: #0f2744;">Enlaces Activos (100%)</div>
       </div>
     </div>
     <div style="flex: 1; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 10px;">
-      <div style="font-size: 20px;">📹</div>
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      </div>
       <div>
         <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">C&aacute;maras de Respaldo</div>
         <div style="font-size: 12px; font-weight: 700; color: #0f2744;">Sistemas Habilitados</div>
       </div>
     </div>
     <div style="flex: 1; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 10px;">
-      <div style="font-size: 20px;">🛡️</div>
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
       <div>
         <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Salud General</div>
         <div style="font-size: 12px; font-weight: 700; color: #0f2744;">Disponibilidad Alta</div>
