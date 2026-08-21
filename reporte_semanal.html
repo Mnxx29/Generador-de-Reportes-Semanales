@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte Camanchaca 2026 Semana 34</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  * {
+    box-sizing: border-box;
+    font-family: 'Segoe UI', -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    color: #0f2744;
+    background-color: #f1f5f9;
+    font-size: 13px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* TOOLBAR FOR BROWSER PREVIEW */
+  .toolbar {
+    background-color: #0f172a;
+    color: #ffffff;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    margin-bottom: 20px;
+  }
+  .toolbar-title {
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toolbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .btn {
+    background-color: #0284c7;
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.2s;
+  }
+  .btn:hover {
+    background-color: #005bb5;
+  }
+  .btn-company {
+    background-color: #334155;
+    color: #e2e8f0;
+  }
+  .btn-company.active {
+    background-color: #0284c7;
+    color: #ffffff;
+    font-weight: 700;
+  }
+
+  /* REPORT PAGE CONTAINERS (A4 Standard) */
+  .report-page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto 30px auto;
+    background-color: #ffffff;
+    padding: 10mm 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  @media print {
+    html, body {
+      width: 210mm;
+      height: 100%;
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #ffffff;
+    }
+    .no-print {
+      display: none !important;
+    }
+    .report-page {
+      width: 210mm;
+      height: 297mm;
+      max-height: 297mm;
+      box-sizing: border-box;
+      margin: 0 !important;
+      padding: 8mm 12mm !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      page-break-after: always;
+      break-after: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      overflow: hidden;
+    }
+    .report-page:last-child {
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+    }
+  }
+
+  /* HEADER BANNER */
+  .header-container {
+    background: linear-gradient(135deg, #093c71 0%, #06264a 100%);
+    border-radius: 12px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #ffffff;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  }
+  .header-container.cermaq {
+    background: linear-gradient(135deg, #006666 0%, #004d4d 100%);
+  }
+  .header-container.mowi {
+    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+  }
+
+  .logo-box {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 5px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+  }
+  .logo-box img {
+    max-height: 34px;
+    max-width: 150px;
+    object-fit: contain;
+  }
+
+  .header-titles {
+    text-align: right;
+  }
+  .header-main-title {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin: 0;
+    text-transform: uppercase;
+    color: #ffffff;
+  }
+  .header-subtitle {
+    font-size: 11px;
+    color: #e0e8f0;
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .badge-pill {
+    background-color: #0099e5;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 12px;
+    letter-spacing: 0.2px;
+  }
+
+  /* SECTION TITLES */
+  .section-header {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+    margin-bottom: 8px;
+  }
+  .section-bar {
+    width: 5px;
+    height: 16px;
+    background-color: #093c71;
+    margin-right: 8px;
+    border-radius: 2px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #093c71;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* KPI CARDS GRID */
+  .kpi-grid {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .kpi-card {
+    flex: 1;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 4px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+  }
+  .kpi-title {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #5a6e85;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+  }
+  .kpi-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #093c71;
+    line-height: 1;
+  }
+  .kpi-value.green {
+    color: #00a86b;
+  }
+
+  /* TABLE STYLES */
+  .data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    margin-bottom: 10px;
+  }
+  .data-table th {
+    background-color: #093c71;
+    color: #ffffff;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 7px 8px;
+    text-align: center;
+    letter-spacing: 0.4px;
+  }
+  .data-table td {
+    padding: 6px 8px;
+    text-align: center;
+    font-size: 11.5px;
+    border-bottom: 1px solid #e2e8f0;
+    background-color: #ffffff;
+    color: #1e293b;
+  }
+  .data-table tr:nth-child(even) td {
+    background-color: #f8fafc;
+  }
+  .data-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* CHARTS SECTION LAYOUT (2x2 Grid) */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .chart-box {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 10px;
+  }
+  .chart-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #1e293b;
+    text-align: center;
+    margin-bottom: 3px;
+  }
+
+  /* INFRASTRUCTURE HEALTH GRID */
+  .health-grid {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .health-card {
+    flex: 1;
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .health-icon {
+    font-size: 18px;
+  }
+  .health-info-title {
+    font-size: 9px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+  }
+  .health-info-val {
+    font-size: 11px;
+    font-weight: 700;
+    color: #0f2744;
+  }
+
+  /* BADGES */
+  .badge-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+  .badge-green { background-color: #f0fdf4; color: #166534; }
+  .badge-amber { background-color: #fef3c7; color: #92400e; font-weight: 700; }
+  .badge-red { background-color: #fee2e2; color: #991b1b; font-weight: 700; }
+
+  /* EDITABLE INSIGHTS INPUT */
+  .editable-obs {
+    width: 100%;
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 10.5px;
+    color: #1e293b;
+    background-color: #fafafa;
+    outline: none;
+  }
+  .editable-obs:focus {
+    border-color: #0284c7;
+    background-color: #ffffff;
+  }
+
+  /* EXECUTIVE NOTES BOX */
+  .notes-box {
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-left: 4px solid #093c71;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+  }
+  .notes-box-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #093c71;
+    margin-bottom: 3px;
+  }
+  .notes-box-content {
+    font-size: 10.5px;
+    color: #334155;
+    outline: none;
+    min-height: 30px;
+    line-height: 1.4;
+  }
+
+  /* FOOTER */
+  .footer {
+    text-align: right;
+    font-size: 9.5px;
+    color: #94a3b8;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- TOOLBAR SUPERIOR PARA VISTA PREVIA Y ACCIONES -->
+  <div class="toolbar no-print">
+    <div class="toolbar-title">
+      📊 Reportes Semanales de Monitoreo &bull; Vista Previa
+    </div>
+    <div class="toolbar-controls">
+      <span>Seleccionar Empresa:</span>
+      <button class="btn btn-company active" onclick="switchCompany('camanchaca')">Camanchaca</button>
+      <button class="btn btn-company" onclick="switchCompany('cermaq')">Cermaq</button>
+      <button class="btn btn-company" onclick="switchCompany('mowi')">Mowi</button>
+      <button class="btn" onclick="window.print()" style="margin-left: 15px; background-color: #10b981;">🖨️ Guardar PDF / Imprimir</button>
+    </div>
+  </div>
+
+  <!-- PÁGINA 1: DASHBOARD RESUMEN EJECUTIVO (PARA EL JEFE) -->
+  <div class="report-page">
+    
+    <!-- ENCABEZADO INSTITUCIONAL -->
+    <div class="header-container" id="headerContainer1">
+      <div class="logo-box">
+        <img id="logoCamanchaca1" src="assets/logos/Camanchaca logo.png" alt="Camanchaca" />
+        <img id="logoCermaq1" src="assets/logos/Cermaq logo.jpg" style="display:none;" alt="Cermaq" />
+        <img id="logoMowi1" src="assets/logos/Mowi logo.png" style="display:none;" alt="Mowi" />
+      </div>
+      <div class="header-titles">
+        <div class="header-main-title" id="companyTitle1">CAMANCHACA &bull; REPORTE SEMANAL</div>
+        <div class="header-subtitle">
+          <span id="dateText">Actualizado: 21 de Agosto de 2026</span>
+          <span class="badge-pill">Confidencial</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 1: MÉTRICAS GENERALES -->
+    <div class="section-header">
+      <div class="section-bar"></div>
+      <div class="section-title">M&eacute;tricas Generales de Monitoreo</div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-title">Centros Activos</div>
+        <div class="kpi-value" id="kpiCentros">16</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Total Jaulas</div>
+        <div class="kpi-value" id="kpiJaulas">191</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Total de C&aacute;maras</div>
+        <div class="kpi-value" id="kpiCamaras">191</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Funcionamiento Global</div>
+        <div class="kpi-value green" id="kpiFunc">100.00%</div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 2: RESUMEN POR REGIÓN -->
+    <div class="section-header">
+      <div class="section-bar"></div>
+      <div class="section-title">Resumen Consolidado por Regi&oacute;n</div>
+    </div>
+
+    <table class="data-table">
+      <thead id="tableHeaderRegional">
+        <tr>
+          <th>Regi&oacute;n</th>
+          <th>Centros</th>
+          <th>Jaulas</th>
+          <th>Total C&aacute;maras</th>
+          <th>C&aacute;maras (Sin Visual)</th>
+          <th>Funcionamiento</th>
+        </tr>
+      </thead>
+      <tbody id="tableBodyRegional">
+        <!-- Rellenado dinámicamente -->
+      </tbody>
+    </table>
+
+    <!-- SECCIÓN 3: DASHBOARD VISUAL INTEGRADO (GRID 2x2 DE GRÁFICOS) -->
+    <div class="section-header">
+      <div class="section-bar"></div>
+      <div class="section-title">An&aacute;lisis Visual Integrado & Salud del Sistema</div>
+    </div>
+
+    <div class="charts-grid">
+      <!-- CHART 1: Centros por Región -->
+      <div class="chart-box">
+        <div class="chart-title">Centros Activos por Regi&oacute;n</div>
+        <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
+          <line x1="30" y1="15" x2="240" y2="15" stroke="#e2e8f0" stroke-dasharray="3,3" />
+          <line x1="30" y1="45" x2="240" y2="45" stroke="#e2e8f0" stroke-dasharray="3,3" />
+          <line x1="30" y1="75" x2="240" y2="75" stroke="#e2e8f0" stroke-dasharray="3,3" />
+          <line x1="30" y1="95" x2="240" y2="95" stroke="#cbd5e1" stroke-width="1" />
+          
+          <rect x="60" y="20" width="50" height="75" fill="#1e62c0" rx="3" />
+          <text x="85" y="15" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">11</text>
+          <text x="85" y="110" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">XI</text>
+
+          <rect x="150" y="55" width="50" height="40" fill="#48c6ff" rx="3" />
+          <text x="175" y="50" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">5</text>
+          <text x="175" y="110" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">X</text>
+        </svg>
+      </div>
+
+      <!-- CHART 2: Funcionamiento Promedio (%) -->
+      <div class="chart-box">
+        <div class="chart-title">Funcionamiento Promedio por Regi&oacute;n</div>
+        <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
+          <line x1="35" y1="20" x2="240" y2="20" stroke="#e2e8f0" stroke-dasharray="3,3" />
+          <line x1="35" y1="55" x2="240" y2="55" stroke="#e2e8f0" stroke-dasharray="3,3" />
+          <line x1="35" y1="95" x2="240" y2="95" stroke="#cbd5e1" stroke-width="1" />
+
+          <rect x="65" y="20" width="50" height="75" fill="#00a86b" rx="3" />
+          <text x="90" y="15" font-size="10" font-weight="bold" fill="#00a86b" text-anchor="middle">100%</text>
+          <text x="90" y="110" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">XI</text>
+
+          <rect x="155" y="20" width="50" height="75" fill="#00a86b" rx="3" />
+          <text x="180" y="15" font-size="10" font-weight="bold" fill="#0f2744" text-anchor="middle">100%</text>
+          <text x="180" y="110" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">X</text>
+        </svg>
+      </div>
+
+      <!-- CHART 3: Distribución Operativa (Gráfico Donut) -->
+      <div class="chart-box">
+        <div class="chart-title">Estado del Parque de C&aacute;maras</div>
+        <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="75" cy="58" r="36" fill="none" stroke="#00a86b" stroke-width="14" />
+          <text x="75" y="56" font-size="12" font-weight="bold" fill="#0f2744" text-anchor="middle" id="donutPercent">100%</text>
+          <text x="75" y="68" font-size="8.5" fill="#64748b" text-anchor="middle">Operativo</text>
+
+          <circle cx="140" cy="35" r="4.5" fill="#00a86b" />
+          <text x="150" y="38" font-size="9.5" font-weight="600" fill="#334155" id="donutOpText">Operativas (191)</text>
+
+          <circle cx="140" cy="58" r="4.5" fill="#f59e0b" />
+          <text x="150" y="61" font-size="9.5" font-weight="600" fill="#334155" id="donutRespText">Respaldo (OK)</text>
+
+          <circle cx="140" cy="81" r="4.5" fill="#ef4444" />
+          <text x="150" y="84" font-size="9.5" font-weight="600" fill="#334155" id="donutFailText">Sin Visual (0)</text>
+        </svg>
+      </div>
+
+      <!-- CHART 4: Relación Jaulas vs Cámaras -->
+      <div class="chart-box">
+        <div class="chart-title">Relaci&oacute;n Jaulas vs C&aacute;maras</div>
+        <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
+          <line x1="30" y1="95" x2="240" y2="95" stroke="#cbd5e1" stroke-width="1" />
+
+          <rect x="50" y="25" width="20" height="70" fill="#093c71" rx="2" />
+          <rect x="73" y="25" width="20" height="70" fill="#0099e5" rx="2" />
+          <text x="71" y="110" font-size="10" font-weight="bold" fill="#0f2744" text-anchor="middle">XI</text>
+
+          <rect x="145" y="55" width="20" height="40" fill="#093c71" rx="2" />
+          <rect x="168" y="55" width="20" height="40" fill="#0099e5" rx="2" />
+          <text x="166" y="110" font-size="10" font-weight="bold" fill="#0f2744" text-anchor="middle">X</text>
+
+          <rect x="180" y="8" width="9" height="9" fill="#093c71" rx="1" />
+          <text x="193" y="15" font-size="8.5" fill="#475569">Jaulas</text>
+          <rect x="220" y="8" width="9" height="9" fill="#0099e5" rx="1" />
+          <text x="233" y="15" font-size="8.5" fill="#475569">Cám.</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- PANEL DE SALUD OPERATIVA E INFRAESTRUCTURA -->
+    <div class="health-grid">
+      <div class="health-card">
+        <div class="health-icon">📡</div>
+        <div>
+          <div class="health-info-title">Conectividad Remota</div>
+          <div class="health-info-val" id="healthSync">Enlaces Activos (100%)</div>
+        </div>
+      </div>
+      <div class="health-card">
+        <div class="health-icon">📹</div>
+        <div>
+          <div class="health-info-title">C&aacute;maras de Respaldo</div>
+          <div class="health-info-val" id="healthBackup">Sistemas Habilitados</div>
+        </div>
+      </div>
+      <div class="health-card">
+        <div class="health-icon">🛡️</div>
+        <div>
+          <div class="health-info-title">Salud General</div>
+          <div class="health-info-val" id="healthOverall">Disponibilidad Alta</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PIE DE PÁGINA PÁGINA 1 -->
+    <div class="footer" id="footerText1">
+      Reporte CAMANCHACA 2026 &bull; Semana 34 &bull; P&aacute;gina 1 de 2
+    </div>
+
+  </div>
+
+  <!-- PÁGINA 2: DETALLE OPERATIVO DE CENTROS E INSIGHTS -->
+  <div class="report-page">
+    
+    <!-- ENCABEZADO PÁGINA 2 -->
+    <div class="header-container" id="headerContainer2" style="padding: 8px 18px;">
+      <div class="logo-box" style="height: 36px;">
+        <img id="logoCamanchaca2" src="assets/logos/Camanchaca logo.png" alt="Camanchaca" />
+        <img id="logoCermaq2" src="assets/logos/Cermaq logo.jpg" style="display:none;" alt="Cermaq" />
+        <img id="logoMowi2" src="assets/logos/Mowi logo.png" style="display:none;" alt="Mowi" />
+      </div>
+      <div class="header-titles">
+        <div class="header-main-title" id="companyTitle2" style="font-size: 16px;">CAMANCHACA &bull; DETALLE OPERATIVO & INSIGHTS</div>
+        <div class="header-subtitle">
+          <span>P&aacute;gina 2 de 2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 4: DETALLE COMPLETO DE CENTROS & INSIGHTS OPERATIVOS -->
+    <div class="section-header">
+      <div class="section-bar"></div>
+      <div class="section-title">Detalle por Centro & Insights Operativos</div>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="text-align: left; width: 22%;">Centro de Cultivo</th>
+          <th style="width: 10%;">Regi&oacute;n</th>
+          <th style="width: 10%;">Jaulas</th>
+          <th style="width: 12%;">C&aacute;maras</th>
+          <th style="text-align: left;">Estado / Observaciones & Insights (Editable)</th>
+        </tr>
+      </thead>
+      <tbody id="tableBodyCenters">
+        <!-- Rellenado dinámicamente -->
+      </tbody>
+    </table>
+
+    <!-- SECCIÓN 5: NOTAS Y HALLAZGOS EJECUTIVOS -->
+    <div class="notes-box">
+      <div class="notes-box-title">
+        📝 Notas & Hallazgos Clave de la Semana (Haz clic para editar)
+      </div>
+      <div class="notes-box-content" contenteditable="true" id="executiveNotes">
+        Sin novedades críticas observadas durante el ciclo semanal. Monitoreo operando con normalidad.
+      </div>
+    </div>
+
+    <!-- PIE DE PÁGINA PÁGINA 2 -->
+    <div class="footer" id="footerText2">
+      Reporte CAMANCHACA 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2
+    </div>
+
+  </div>
+
+  <script>
+    const dataCamanchaca = [
+      { centro: 'Chonos', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Cosechado' },
+      { centro: 'Leucayec', reg: 'XI', jaulas: 16, camaras: 16, obs: 'En proceso de cosecha (jaulas 303, 306 y 308 con peces)' },
+      { centro: 'Garrao', reg: 'XI', jaulas: 16, camaras: 16, obs: 'Comenzó cosecha (Jaula 310 cosechada). Sin problemas' },
+      { centro: 'Edward', reg: 'X', jaulas: 7, camaras: 7, obs: 'Sin novedad' },
+      { centro: 'Izaza', reg: 'XI', jaulas: 12, camaras: 12, obs: 'Sin novedad' },
+      { centro: 'Punta Alta', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Benjamin', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'King', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Puerto Argentino', reg: 'X', jaulas: 14, camaras: 14, obs: 'Problemas recurrentes con NVR de Base, congelamiento de imagen' },
+      { centro: 'Puelche', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Sur Weste Filomena', reg: 'XI', jaulas: 8, camaras: 8, obs: 'Sin novedad' },
+      { centro: 'Weste Filomena', reg: 'XI', jaulas: 6, camaras: 6, obs: 'Sin novedad' },
+      { centro: 'Sur Garrao', reg: 'XI', jaulas: 7, camaras: 7, obs: 'Sin novedad' },
+      { centro: 'Williams 1', reg: 'XI', jaulas: 7, camaras: 7, obs: 'Sin novedad' },
+      { centro: 'Pilpilehue 300', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Pilpilehue 400', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' }
+    ];
+
+    const dataCermaq = [
+      { centro: 'Unicornio Sur', reg: 'XII', jaulas: 8, camaras: 8, obs: 'No responde transmisión' },
+      { centro: 'Llancacheo', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad (Cosecha finaliza mediados de agosto)' },
+      { centro: 'Pollollo', reg: 'X', jaulas: 14, camaras: 14, obs: 'Cosechando (usando cámaras de jaulas cosechadas como respaldo)' },
+      { centro: 'Aulen', reg: 'X', jaulas: 14, camaras: 14, obs: 'Switch Módulo 100 Cuadrante 2 presenta falla' },
+      { centro: 'Luchin', reg: 'X', jaulas: 12, camaras: 12, obs: 'A la espera de cámaras de respaldo solicitadas' },
+      { centro: 'Punta Laura', reg: 'XII', jaulas: 8, camaras: 8, obs: 'J102 CONO sin imagen' },
+      { centro: 'Voigue', reg: 'X', jaulas: 12, camaras: 12, obs: 'Cosechando (cámaras respaldadas)' },
+      { centro: 'Manzano', reg: 'X', jaulas: 10, camaras: 10, obs: 'Pantalla PTZ sin visual' },
+      { centro: 'Ducaña', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Calen 1', reg: 'X', jaulas: 10, camaras: 10, obs: 'Sin novedad' },
+      { centro: 'Yelcho', reg: 'X', jaulas: 10, camaras: 10, obs: 'Cámara a la espera de revisión por buzo' },
+      { centro: 'Isla Tac', reg: 'X', jaulas: 20, camaras: 20, obs: 'Monitoreo con intermitencia de señal' },
+      { centro: 'Calen 2', reg: 'X', jaulas: 8, camaras: 8, obs: 'Sin novedad' },
+      { centro: 'Cachihue', reg: 'X', jaulas: 8, camaras: 8, obs: 'No responde transmisión' },
+      { centro: 'Navarro', reg: 'XII', jaulas: 10, camaras: 10, obs: 'Sin novedad' },
+      { centro: 'Chidhuapi 2', reg: 'X', jaulas: 8, camaras: 8, obs: 'Sin novedad' },
+      { centro: 'Chidhuapi 3', reg: 'X', jaulas: 16, camaras: 16, obs: 'Sin novedad' },
+      { centro: 'Bertrand', reg: 'XII', jaulas: 8, camaras: 8, obs: 'No responde transmisión' },
+      { centro: 'Buill', reg: 'X', jaulas: 10, camaras: 10, obs: 'Cámara a la espera de buzo' },
+      { centro: 'Chaullin Norte', reg: 'X', jaulas: 10, camaras: 10, obs: 'Sin novedad' },
+      { centro: 'Tranqui 1', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Churrecue', reg: 'X', jaulas: 10, camaras: 10, obs: 'Pérdida de señal en Pantalla 1 (Requiere conversor HDMI-UTP)' },
+      { centro: 'Isla Garcia', reg: 'XII', jaulas: 10, camaras: 10, obs: 'No responde transmisión' },
+      { centro: 'Quilen', reg: 'X', jaulas: 8, camaras: 8, obs: 'Sin novedad' },
+      { centro: 'Tranqui 2', reg: 'X', jaulas: 12, camaras: 12, obs: 'No responde transmisión' },
+      { centro: 'Chauco', reg: 'X', jaulas: 8, camaras: 8, obs: 'Sin novedad' }
+    ];
+
+    const dataMowi = [
+      { centro: 'Centro Hueihue', reg: 'X', jaulas: 5, camaras: 10, obs: 'Sin novedad (100% Operativo)' },
+      { centro: 'Centro Linao', reg: 'X', jaulas: 16, camaras: 16, obs: 'Sin novedad (100% Operativo)' }
+    ];
+
+    function switchCompany(company) {
+      document.querySelectorAll('.btn-company').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      const header1 = document.getElementById('headerContainer1');
+      const header2 = document.getElementById('headerContainer2');
+
+      const logoCam1 = document.getElementById('logoCamanchaca1');
+      const logoCer1 = document.getElementById('logoCermaq1');
+      const logoMow1 = document.getElementById('logoMowi1');
+
+      const logoCam2 = document.getElementById('logoCamanchaca2');
+      const logoCer2 = document.getElementById('logoCermaq2');
+      const logoMow2 = document.getElementById('logoMowi2');
+
+      const title1 = document.getElementById('companyTitle1');
+      const title2 = document.getElementById('companyTitle2');
+      const footer1 = document.getElementById('footerText1');
+      const footer2 = document.getElementById('footerText2');
+      const dateText = document.getElementById('dateText');
+      const tableHeaderReg = document.getElementById('tableHeaderRegional');
+
+      [logoCam1, logoCer1, logoMow1, logoCam2, logoCer2, logoMow2].forEach(img => img.style.display = 'none');
+      header1.className = 'header-container';
+      header2.className = 'header-container';
+
+      if (company === 'camanchaca') {
+        document.title = 'Reporte Camanchaca 2026 Semana 34';
+        logoCam1.style.display = 'block';
+        logoCam2.style.display = 'block';
+        title1.innerHTML = 'CAMANCHACA &bull; REPORTE SEMANAL';
+        title2.innerHTML = 'CAMANCHACA &bull; DETALLE OPERATIVO & INSIGHTS';
+        footer1.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana 34 &bull; P&aacute;gina 1 de 2';
+        footer2.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2';
+        dateText.innerHTML = 'Actualizado: 21 de Agosto de 2026';
+        
+        tableHeaderReg.innerHTML = `
+          <tr>
+            <th>Regi&oacute;n</th>
+            <th>Centros</th>
+            <th>Jaulas</th>
+            <th>Total C&aacute;maras</th>
+            <th>C&aacute;maras (Sin Visual)</th>
+            <th>Funcionamiento</th>
+          </tr>`;
+
+        updateMetrics(16, 191, 191, '100.00%', [
+          { reg: 'X', centros: 5, jaulas: 63, camaras: 63, fallas: 0, func: '100.00%' },
+          { reg: 'XI', centros: 11, jaulas: 128, camaras: 128, fallas: 0, func: '100.00%' }
+        ], false);
+
+        document.getElementById('donutPercent').innerText = '100%';
+        document.getElementById('donutOpText').innerText = 'Operativas (191)';
+        document.getElementById('donutFailText').innerText = 'Sin Visual (0)';
+
+        renderCentersTable(dataCamanchaca);
+      } else if (company === 'cermaq') {
+        document.title = 'Reporte Cermaq 2026 Semana 33';
+        header1.classList.add('cermaq');
+        header2.classList.add('cermaq');
+        logoCer1.style.display = 'block';
+        logoCer2.style.display = 'block';
+        title1.innerHTML = 'CERMAQ &bull; REPORTE SEMANAL';
+        title2.innerHTML = 'CERMAQ &bull; DETALLE OPERATIVO & INSIGHTS';
+        footer1.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana 33 &bull; P&aacute;gina 1 de 2';
+        footer2.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana 33 &bull; P&aacute;gina 2 de 2';
+        dateText.innerHTML = 'Actualizado: 14 de Agosto de 2026';
+        
+        tableHeaderReg.innerHTML = `
+          <tr>
+            <th>Regi&oacute;n</th>
+            <th>Centros</th>
+            <th>Jaulas</th>
+            <th>Total C&aacute;maras</th>
+            <th>Sin Visual</th>
+            <th>Mort. Sin Visual</th>
+            <th>Funcionamiento</th>
+          </tr>`;
+
+        updateMetrics(26, 286, 718, '99.30%', [
+          { reg: 'X', centros: 21, jaulas: 242, camaras: 614, fallas: 0, mortFallas: 4, func: '99.35%' },
+          { reg: 'XII', centros: 5, jaulas: 44, camaras: 104, fallas: 0, mortFallas: 1, func: '99.04%' }
+        ], true);
+
+        document.getElementById('donutPercent').innerText = '99.3%';
+        document.getElementById('donutOpText').innerText = 'Operativas (713)';
+        document.getElementById('donutFailText').innerText = 'Sin Visual (5)';
+
+        renderCentersTable(dataCermaq);
+      } else if (company === 'mowi') {
+        document.title = 'Reporte Mowi 2026 Semana 33';
+        header1.classList.add('mowi');
+        header2.classList.add('mowi');
+        logoMow1.style.display = 'block';
+        logoMow2.style.display = 'block';
+        title1.innerHTML = 'MOWI &bull; REPORTE SEMANAL';
+        title2.innerHTML = 'MOWI &bull; DETALLE OPERATIVO & INSIGHTS';
+        footer1.innerHTML = 'Reporte MOWI 2026 &bull; Semana 33 &bull; P&aacute;gina 1 de 2';
+        footer2.innerHTML = 'Reporte MOWI 2026 &bull; Semana 33 &bull; P&aacute;gina 2 de 2';
+        dateText.innerHTML = 'Actualizado: 14 de Agosto de 2026';
+        
+        tableHeaderReg.innerHTML = `
+          <tr>
+            <th>Regi&oacute;n</th>
+            <th>Centros</th>
+            <th>Jaulas</th>
+            <th>Total C&aacute;maras</th>
+            <th>C&aacute;maras (Sin Visual)</th>
+            <th>Funcionamiento</th>
+          </tr>`;
+
+        updateMetrics(2, 21, 26, '100.00%', [
+          { reg: 'X', centros: 2, jaulas: 21, camaras: 26, fallas: 0, func: '100.00%' }
+        ], false);
+
+        document.getElementById('donutPercent').innerText = '100%';
+        document.getElementById('donutOpText').innerText = 'Operativas (26)';
+        document.getElementById('donutFailText').innerText = 'Sin Visual (0)';
+
+        renderCentersTable(dataMowi);
+      }
+    }
+
+    function updateMetrics(centros, jaulas, camaras, func, regionalData, isCermaq) {
+      document.getElementById('kpiCentros').innerText = centros;
+      document.getElementById('kpiJaulas').innerText = jaulas;
+      document.getElementById('kpiCamaras').innerText = camaras;
+      document.getElementById('kpiFunc').innerText = func;
+
+      const tbody = document.getElementById('tableBodyRegional');
+      tbody.innerHTML = '';
+      regionalData.forEach(row => {
+        const tr = document.createElement('tr');
+        if (isCermaq) {
+          tr.innerHTML = `
+            <td><strong>${row.reg}</strong></td>
+            <td>${row.centros}</td>
+            <td>${row.jaulas}</td>
+            <td>${row.camaras}</td>
+            <td>${row.fallas}</td>
+            <td>${row.mortFallas}</td>
+            <td><span class="badge-status badge-green">${row.func}</span></td>
+          `;
+        } else {
+          tr.innerHTML = `
+            <td><strong>${row.reg}</strong></td>
+            <td>${row.centros}</td>
+            <td>${row.jaulas}</td>
+            <td>${row.camaras}</td>
+            <td>${row.fallas}</td>
+            <td><span class="badge-status badge-green">${row.func}</span></td>
+          `;
+        }
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderCentersTable(centers) {
+      const tbody = document.getElementById('tableBodyCenters');
+      tbody.innerHTML = '';
+      centers.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="text-align: left; font-weight: 700;">${item.centro}</td>
+          <td>${item.reg}</td>
+          <td>${item.jaulas}</td>
+          <td>${item.camaras}</td>
+          <td style="text-align: left;">
+            <input class="editable-obs" type="text" value="${item.obs}" />
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Initialize default load (Camanchaca)
+    window.onload = function() {
+      document.title = 'Reporte Camanchaca 2026 Semana 34';
+      renderCentersTable(dataCamanchaca);
+    };
+  </script>
+</body>
+</html>

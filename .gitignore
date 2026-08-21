@@ -1,0 +1,11 @@
+# Archivos temporales de Excel
+~$*.xlsx
+~$*.docx
+
+# Archivos temporales de renderizado
+temp_report.html
+*.tmp
+
+# Archivos del sistema u OS
+.DS_Store
+Thumbs.db
