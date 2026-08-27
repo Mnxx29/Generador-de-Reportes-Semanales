@@ -356,7 +356,7 @@ if (Test-Path $reporteHtmlPath) {
         renderCentersTable(dataCermaq);
       }
 "@
-            $patternSwitch = "(?s)\} else if \(company === 'cermaq'\) \{.*?\n        renderCentersTable\(dataCermaq\);\n      \}"
+            $patternSwitch = "(?s)\}\s*else if \(company === 'cermaq'\) \{.*?renderCentersTable\(dataCermaq\);\s*\}"
             $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $switchBlock })
         } elseif ($currentEmpresa -eq "Camanchaca") {
             $switchBlock = @"
@@ -391,7 +391,7 @@ if (Test-Path $reporteHtmlPath) {
         renderCentersTable(dataCamanchaca);
       }
 "@
-            $patternSwitch = "(?s)if \(company === 'camanchaca'\) \{.*?\n        renderCentersTable\(dataCamanchaca\);\n      \}"
+            $patternSwitch = "(?s)\s*if \(company === 'camanchaca'\) \{.*?renderCentersTable\(dataCamanchaca\);\s*\}"
             $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $switchBlock })
         } elseif ($currentEmpresa -eq "Mowi") {
             $switchBlock = @"
@@ -428,7 +428,7 @@ if (Test-Path $reporteHtmlPath) {
         renderCentersTable(dataMowi);
       }
 "@
-            $patternSwitch = "(?s)\} else if \(company === 'mowi'\) \{.*?\n        renderCentersTable\(dataMowi\);\n      \}"
+            $patternSwitch = "(?s)\}\s*else if \(company === 'mowi'\) \{.*?renderCentersTable\(dataMowi\);\s*\}"
             $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $switchBlock })
         }
 
