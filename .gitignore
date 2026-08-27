@@ -1,6 +1,15 @@
-# Archivos temporales de Excel
+# Archivos de Datos Excel (Información sensible)
+*.xlsx
+*.xls
+Datos_Excel/*
+!Datos_Excel/.gitkeep
 ~$*.xlsx
 ~$*.docx
+
+# Archivos de Reportes PDF (Información sensible)
+*.pdf
+Reportes_PDF/*
+!Reportes_PDF/.gitkeep
 
 # Archivos temporales de renderizado
 temp_report.html
