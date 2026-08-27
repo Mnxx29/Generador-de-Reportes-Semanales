@@ -39,12 +39,18 @@ Generador de Reportes Semanales/
 
 ## 📖 Uso
 
-### 1. Generación de PDFs por consola (PowerShell)
-```powershell
-.\generar_reporte.ps1 -Empresa Camanchaca
-.\generar_reporte.ps1 -Empresa Cermaq
-.\generar_reporte.ps1 -Empresa Mowi
-```
+Para ver la guía paso a paso detallada, consulta [INSTRUCCIONES.md](./INSTRUCCIONES.md).
 
-### 2. Vista previa e impresión desde el navegador
-Abre `reporte_semanal.html` en Chrome/Edge, selecciona la empresa deseada, edita las observaciones en tiempo real y presiona **🖨️ Guardar PDF / Imprimir** (o `Ctrl + P`).
+### Flujo Recomendado (Previsualizar en Web e Imprimir)
+1. Coloca los archivos Excel actualizados en `Datos_Excel/`.
+2. Actualiza la web ejecutando en PowerShell:
+   ```powershell
+   .\generar_reporte.ps1
+   ```
+3. Abre [`reporte_semanal.html`](./reporte_semanal.html) en tu navegador, navega entre las empresas (**Camanchaca**, **Cermaq**, **Mowi**), revisa los datos y haz clic en **🖨️ Guardar PDF / Imprimir**.
+
+### Opcional: Generación Directa de PDFs por Consola
+Si deseas generar directamente los PDFs sin previsualizar en la web:
+```powershell
+.\generar_reporte.ps1 -GenerarPDF
+```

@@ -644,20 +644,65 @@
 
   <script>
     const dataCamanchaca = [
-      { centro: 'Chonos', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Cosechado' },\n      { centro: 'Leucayec', reg: 'XI', jaulas: 16, camaras: 16, obs: 'En proceso de cosecha, solamente quedan con peces las jaulas 303, 306 y 308, sin problema en general' },\n      { centro: 'Garrao', reg: 'XI', jaulas: 16, camaras: 16, obs: 'Comenzaron cosechar, Jaula 310 ya cosechada. Sin problema en general' },\n      { centro: 'Edward', reg: 'X', jaulas: 7, camaras: 7, obs: 'sin novedad' },\n      { centro: 'Izaza', reg: 'XI', jaulas: 12, camaras: 12, obs: 'sin novedad' },\n      { centro: 'Punta Alta', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },\n      { centro: 'Benjamin', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },\n      { centro: 'King', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },\n      { centro: 'Puerto Argentino', reg: 'X', jaulas: 14, camaras: 14, obs: 'Problemas recurrentes con NVR de Base, se comienzan a congelar las imágenes' },\n      { centro: 'Puelche', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' },\n      { centro: 'Sur Weste Filomena', reg: 'XI', jaulas: 8, camaras: 8, obs: 'Sin novedad' },\n      { centro: 'Weste Filomena', reg: 'XI', jaulas: 6, camaras: 6, obs: 'Sin novedad' },\n      { centro: 'Sur Garrao', reg: 'XI', jaulas: 7, camaras: 7, obs: 'Sin novedad' },\n      { centro: 'Williams 1', reg: 'XI', jaulas: 7, camaras: 7, obs: 'Sin novedad' },\n      { centro: 'Pilpilehue 300', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' },\n      { centro: 'Pilpilehue 400', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' }
+      { centro: 'Chonos', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Cosechado' },
+      { centro: 'Leucayec', reg: 'XI', jaulas: 16, camaras: 16, obs: 'En proceso de cosecha, solamente quedan con peces las jaulas 303, 306 y 308, sin problema en general' },
+      { centro: 'Garrao', reg: 'XI', jaulas: 16, camaras: 16, obs: 'Comenzaron cosechar, Jaula 310 ya cosechada. Sin problema en general' },
+      { centro: 'Edward', reg: 'X', jaulas: 7, camaras: 7, obs: 'sin novedad' },
+      { centro: 'Izaza', reg: 'XI', jaulas: 12, camaras: 12, obs: 'sin novedad' },
+      { centro: 'Punta Alta', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Benjamin', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'King', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Puerto Argentino', reg: 'X', jaulas: 14, camaras: 14, obs: 'Problemas recurrentes con NVR de Base, se comienzan a congelar las imágenes' },
+      { centro: 'Puelche', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Sur Weste Filomena', reg: 'XI', jaulas: 8, camaras: 8, obs: 'Sin novedad' },
+      { centro: 'Weste Filomena', reg: 'XI', jaulas: 6, camaras: 6, obs: 'Sin novedad' },
+      { centro: 'Sur Garrao', reg: 'XI', jaulas: 7, camaras: 7, obs: 'Sin novedad' },
+      { centro: 'Williams 1', reg: 'XI', jaulas: 7, camaras: 7, obs: 'Sin novedad' },
+      { centro: 'Pilpilehue 300', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Pilpilehue 400', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' }
     ];
 
     const dataCermaq = [
-      { centro: 'Unicornio Sur', reg: 'XII', jaulas: 8, camaras: 24, obs: 'No responde' },\n      { centro: 'Llancacheo', reg: 'X', jaulas: 14, camaras: 42, obs: 'Tiene una pantalla en mal estado que no da imagen, no se hará el cambio ya que están apunto de cosechar' },\n      { centro: 'Aulen', reg: 'X', jaulas: 14, camaras: 42, obs: 'Sin novedad' },\n      { centro: 'Luchin', reg: 'X', jaulas: 12, camaras: 36, obs: 'Sin novedad' },\n      { centro: 'Punta Laura', reg: 'XII', jaulas: 8, camaras: 24, obs: 'Sin novedad' },\n      { centro: 'Voigue', reg: 'X', jaulas: 12, camaras: 36, obs: 'Cosechando, se utilizan cámaras de jaulas cosechadas como respaldo' },\n      { centro: 'Manzano', reg: 'X', jaulas: 10, camaras: 30, obs: 'Sin novedad' },\n      { centro: 'Ducaña', reg: 'X', jaulas: 14, camaras: 42, obs: 'Sin novedad' },\n      { centro: 'Calen 1', reg: 'X', jaulas: 10, camaras: 30, obs: 'Sin novedad' },\n      { centro: 'Yelcho', reg: 'X', jaulas: 10, camaras: 30, obs: 'Sin novedad' },\n      { centro: 'Isla Tac', reg: 'X', jaulas: 20, camaras: 60, obs: 'Sin novedad' },\n      { centro: 'Calen 2', reg: 'X', jaulas: 8, camaras: 16, obs: 'Sin novedad' },\n      { centro: 'Cachihue', reg: 'X', jaulas: 8, camaras: 16, obs: 'No responde' },\n      { centro: 'Navarro', reg: 'XII', jaulas: 10, camaras: 20, obs: 'Sin novedad' },\n      { centro: 'Chidhuapi 2', reg: 'X', jaulas: 8, camaras: 16, obs: 'Sin novedad' },\n      { centro: 'Chidhuapi 3', reg: 'X', jaulas: 16, camaras: 32, obs: 'Sin novedad' },\n      { centro: 'Bertrand', reg: 'XII', jaulas: 8, camaras: 16, obs: 'Sin novedad' },\n      { centro: 'Buill', reg: 'X', jaulas: 10, camaras: 20, obs: 'Sin novedad' },\n      { centro: 'Chaullin Norte', reg: 'X', jaulas: 10, camaras: 20, obs: 'Sin novedad, mandaron 1 cámara en mal estado' },\n      { centro: 'Tranqui 1', reg: 'X', jaulas: 14, camaras: 28, obs: 'Sin novedad' },\n      { centro: 'Churrecue', reg: 'X', jaulas: 10, camaras: 20, obs: 'Sin novedad' },\n      { centro: 'Isla Garcia', reg: 'XII', jaulas: 10, camaras: 20, obs: 'No responde' },\n      { centro: 'Quilen', reg: 'X', jaulas: 8, camaras: 16, obs: 'Sin novedad' },\n      { centro: 'Tranqui 2', reg: 'X', jaulas: 12, camaras: 24, obs: 'Cámara j106 A y cámara de mortalidad j107 sin visual, a la espera de que las cambien para configurar' },\n      { centro: 'Chauco', reg: 'X', jaulas: 8, camaras: 16, obs: 'Sin novedad' }
+      { centro: 'Unicornio Sur', reg: 'XII', jaulas: 8, camaras: 24, obs: 'No responde' },
+      { centro: 'Llancacheo', reg: 'X', jaulas: 14, camaras: 42, obs: 'Tiene una pantalla en mal estado que no da imagen, no se hará el cambio ya que están apunto de cosechar' },
+      { centro: 'Aulen', reg: 'X', jaulas: 14, camaras: 42, obs: 'Sin novedad' },
+      { centro: 'Luchin', reg: 'X', jaulas: 12, camaras: 36, obs: 'Sin novedad' },
+      { centro: 'Punta Laura', reg: 'XII', jaulas: 8, camaras: 24, obs: 'Sin novedad' },
+      { centro: 'Voigue', reg: 'X', jaulas: 12, camaras: 36, obs: 'Cosechando, se utilizan cámaras de jaulas cosechadas como respaldo' },
+      { centro: 'Manzano', reg: 'X', jaulas: 10, camaras: 30, obs: 'Sin novedad' },
+      { centro: 'Ducaña', reg: 'X', jaulas: 14, camaras: 42, obs: 'Sin novedad' },
+      { centro: 'Calen 1', reg: 'X', jaulas: 10, camaras: 30, obs: 'Sin novedad' },
+      { centro: 'Yelcho', reg: 'X', jaulas: 10, camaras: 30, obs: 'Sin novedad' },
+      { centro: 'Isla Tac', reg: 'X', jaulas: 20, camaras: 60, obs: 'Sin novedad' },
+      { centro: 'Calen 2', reg: 'X', jaulas: 8, camaras: 16, obs: 'Sin novedad' },
+      { centro: 'Cachihue', reg: 'X', jaulas: 8, camaras: 16, obs: 'No responde' },
+      { centro: 'Navarro', reg: 'XII', jaulas: 10, camaras: 20, obs: 'Sin novedad' },
+      { centro: 'Chidhuapi 2', reg: 'X', jaulas: 8, camaras: 16, obs: 'Sin novedad' },
+      { centro: 'Chidhuapi 3', reg: 'X', jaulas: 16, camaras: 32, obs: 'Sin novedad' },
+      { centro: 'Bertrand', reg: 'XII', jaulas: 8, camaras: 16, obs: 'Sin novedad' },
+      { centro: 'Buill', reg: 'X', jaulas: 10, camaras: 20, obs: 'Sin novedad' },
+      { centro: 'Chaullin Norte', reg: 'X', jaulas: 10, camaras: 20, obs: 'Sin novedad, mandaron 1 cámara en mal estado' },
+      { centro: 'Tranqui 1', reg: 'X', jaulas: 14, camaras: 28, obs: 'Sin novedad' },
+      { centro: 'Churrecue', reg: 'X', jaulas: 10, camaras: 20, obs: 'Sin novedad' },
+      { centro: 'Isla Garcia', reg: 'XII', jaulas: 10, camaras: 20, obs: 'No responde' },
+      { centro: 'Quilen', reg: 'X', jaulas: 8, camaras: 16, obs: 'Sin novedad' },
+      { centro: 'Tranqui 2', reg: 'X', jaulas: 12, camaras: 24, obs: 'Cámara j106 A y cámara de mortalidad j107 sin visual, a la espera de que las cambien para configurar' },
+      { centro: 'Chauco', reg: 'X', jaulas: 8, camaras: 16, obs: 'Sin novedad' }
     ];
 
     const dataMowi = [
-      { centro: 'Centro Hueihue', reg: 'X', jaulas: 5, camaras: 10, obs: 'Sin novedad' },\n      { centro: 'Centro Linao', reg: 'X', jaulas: 16, camaras: 16, obs: 'Sin novedad' }
+      { centro: 'Centro Hueihue', reg: 'X', jaulas: 5, camaras: 10, obs: 'Sin novedad' },
+      { centro: 'Centro Linao', reg: 'X', jaulas: 16, camaras: 16, obs: 'Sin novedad' }
     ];
 
     function switchCompany(company) {
-      document.querySelectorAll('.btn-company').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
+      document.querySelectorAll('.btn-company').forEach(btn => {
+        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${company}'`)) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
 
       const header1 = document.getElementById('headerContainer1');
       const header2 = document.getElementById('headerContainer2');
@@ -677,96 +722,108 @@
       const dateText = document.getElementById('dateText');
       const tableHeaderReg = document.getElementById('tableHeaderRegional');
 
-      [logoCam1, logoCer1, logoMow1, logoCam2, logoCer2, logoMow2].forEach(img => img.style.display = 'none');
-      header1.className = 'header-container';
-      header2.className = 'header-container';
+      [logoCam1, logoCer1, logoMow1, logoCam2, logoCer2, logoMow2].forEach(img => {
+        if (img) img.style.display = 'none';
+      });
+      if (header1) header1.className = 'header-container';
+      if (header2) header2.className = 'header-container';
 
-      if (company === 'camanchaca') {
+            if (company === 'camanchaca') {
         document.title = 'Reporte Camanchaca 2026 Semana 34';
-        logoCam1.style.display = 'block';
-        logoCam2.style.display = 'block';
-        title1.innerHTML = 'CAMANCHACA &bull; REPORTE SEMANAL';
-        title2.innerHTML = 'CAMANCHACA &bull; DETALLE OPERATIVO & INSIGHTS';
-        footer1.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana 34 &bull; P&aacute;gina 1 de 2';
-        footer2.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2';
-        dateText.innerHTML = 'Actualizado: 21 de Agosto de 2026';
+        if (logoCam1) logoCam1.style.display = 'block';
+        if (logoCam2) logoCam2.style.display = 'block';
+        if (title1) title1.innerHTML = 'CAMANCHACA &bull; REPORTE SEMANAL';
+        if (title2) title2.innerHTML = 'CAMANCHACA &bull; DETALLE OPERATIVO & INSIGHTS';
+        if (footer1) footer1.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana 34 &bull; P&aacute;gina 1 de 2';
+        if (footer2) footer2.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2';
+        if (dateText) dateText.innerHTML = 'Actualizado: 21 de Agosto de 2026';
         
-        tableHeaderReg.innerHTML = `
-          <tr>
-            <th>Regi&oacute;n</th>
-            <th>Centros</th>
-            <th>Jaulas</th>
-            <th>Total C&aacute;maras</th>
-            <th>C&aacute;maras (Sin Visual)</th>
-            <th>Funcionamiento</th>
-          </tr>`;
+        if (tableHeaderReg) {
+          tableHeaderReg.innerHTML = `
+            <tr>
+              <th>Regi&oacute;n</th>
+              <th>Centros</th>
+              <th>Jaulas</th>
+              <th>Total C&aacute;maras</th>
+              <th>C&aacute;maras (Sin Visual)</th>
+              <th>Funcionamiento</th>
+            </tr>`;
+        }
 
-        updateMetrics(16, 191, 191, '100.00%', [
-          { reg: 'X', centros: 5, jaulas: 63, camaras: 63, fallas: 0, func: '100.00%' },
-          { reg: 'XI', centros: 11, jaulas: 128, camaras: 128, fallas: 0, func: '100.00%' }
+        updateMetrics(16, 191, 191, '100,00%', [
+          { reg: 'X', centros: 5, jaulas: 63, camaras: 63, fallas: 0, func: '100,00%' },
+          { reg: 'XI', centros: 11, jaulas: 128, camaras: 128, fallas: 0, func: '100,00%' }
         ], false);
 
-        document.getElementById('donutPercent').innerText = '100%';
+        document.getElementById('donutPercent').innerText = '100,00%';
         document.getElementById('donutOpText').innerText = 'Operativas (191)';
         document.getElementById('donutFailText').innerText = 'Sin Visual (0)';
 
         renderCentersTable(dataCamanchaca);
             } else if (company === 'cermaq') {
         document.title = 'Reporte Cermaq 2026 Semana 34';
-        header1.classList.add('cermaq');
-        header2.classList.add('cermaq');
-        logoCer1.style.display = 'block';
-        logoCer2.style.display = 'block';
-        title1.innerHTML = 'CERMAQ &bull; REPORTE SEMANAL';
-        title2.innerHTML = 'CERMAQ &bull; DETALLE OPERATIVO & INSIGHTS';
-        footer1.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana 34 &bull; P&aacute;gina 1 de 2';
-        footer2.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2';
-        dateText.innerHTML = 'Actualizado: 21 de Agosto de 2026';
+        if (header1) header1.classList.add('cermaq');
+        if (header2) header2.classList.add('cermaq');
+        if (logoCer1) logoCer1.style.display = 'block';
+        if (logoCer2) logoCer2.style.display = 'block';
+        if (title1) title1.innerHTML = 'CERMAQ &bull; REPORTE SEMANAL';
+        if (title2) title2.innerHTML = 'CERMAQ &bull; DETALLE OPERATIVO & INSIGHTS';
+        if (footer1) footer1.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana 34 &bull; P&aacute;gina 1 de 2';
+        if (footer2) footer2.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2';
+        if (dateText) dateText.innerHTML = 'Actualizado: 21 de Agosto de 2026';
         
-        tableHeaderReg.innerHTML = 
-          <tr>
-            <th>Regi&oacute;n</th>
-            <th>Centros</th>
-            <th>Jaulas</th>
-            <th>Total C&aacute;maras</th>
-            <th>C&aacute;m. Est&aacute;ndar (Falla)</th>
-            <th>C&aacute;m. Mortalidad (Falla)</th>
-            <th>Funcionamiento</th>
-          </tr>;
+        if (tableHeaderReg) {
+          tableHeaderReg.innerHTML = `
+            <tr>
+              <th>Regi&oacute;n</th>
+              <th>Centros</th>
+              <th>Jaulas</th>
+              <th>Total C&aacute;maras</th>
+              <th>C&aacute;m. Est&aacute;ndar (Falla)</th>
+              <th>C&aacute;m. Mortalidad (Falla)</th>
+              <th>Funcionamiento</th>
+            </tr>`;
+        }
 
-        updateMetrics(25, 272, 676, '99,70%', [\n          { reg: 'X', centros: 20, jaulas: 228, camaras: 572, fallas: 1, mortFallas: 1, func: '99,65%' },\n          { reg: 'XII', centros: 5, jaulas: 44, camaras: 104, fallas: 0, mortFallas: 0, func: '100,00%' }\n        ], true);
+        updateMetrics(25, 272, 676, '99,70%', [
+          { reg: 'X', centros: 20, jaulas: 228, camaras: 572, fallas: 1, mortFallas: 1, func: '99,65%' },
+          { reg: 'XII', centros: 5, jaulas: 44, camaras: 104, fallas: 0, mortFallas: 0, func: '100,00%' }
+        ], true);
 
         document.getElementById('donutPercent').innerText = '99,70%';
         document.getElementById('donutOpText').innerText = 'Operativas (674)';
         document.getElementById('donutFailText').innerText = 'Sin Visual (2)';
 
-        renderCentersTable(dataCermaq); else if (company === 'mowi') {
+        renderCentersTable(dataCermaq);
+            } else if (company === 'mowi') {
         document.title = 'Reporte Mowi 2026 Semana 34';
-        header1.classList.add('mowi');
-        header2.classList.add('mowi');
-        logoMow1.style.display = 'block';
-        logoMow2.style.display = 'block';
-        title1.innerHTML = 'MOWI &bull; REPORTE SEMANAL';
-        title2.innerHTML = 'MOWI &bull; DETALLE OPERATIVO & INSIGHTS';
-        footer1.innerHTML = 'Reporte MOWI 2026 &bull; Semana 34 &bull; P&aacute;gina 1 de 2';
-        footer2.innerHTML = 'Reporte MOWI 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2';
-        dateText.innerHTML = 'Actualizado: 14 de Agosto de 2026';
+        if (header1) header1.classList.add('mowi');
+        if (header2) header2.classList.add('mowi');
+        if (logoMow1) logoMow1.style.display = 'block';
+        if (logoMow2) logoMow2.style.display = 'block';
+        if (title1) title1.innerHTML = 'MOWI &bull; REPORTE SEMANAL';
+        if (title2) title2.innerHTML = 'MOWI &bull; DETALLE OPERATIVO & INSIGHTS';
+        if (footer1) footer1.innerHTML = 'Reporte MOWI 2026 &bull; Semana 34 &bull; P&aacute;gina 1 de 2';
+        if (footer2) footer2.innerHTML = 'Reporte MOWI 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2';
+        if (dateText) dateText.innerHTML = 'Actualizado: 21 de Agosto de 2026';
         
-        tableHeaderReg.innerHTML = `
-          <tr>
-            <th>Regi&oacute;n</th>
-            <th>Centros</th>
-            <th>Jaulas</th>
-            <th>Total C&aacute;maras</th>
-            <th>C&aacute;maras (Sin Visual)</th>
-            <th>Funcionamiento</th>
-          </tr>`;
+        if (tableHeaderReg) {
+          tableHeaderReg.innerHTML = `
+            <tr>
+              <th>Regi&oacute;n</th>
+              <th>Centros</th>
+              <th>Jaulas</th>
+              <th>Total C&aacute;maras</th>
+              <th>C&aacute;maras (Sin Visual)</th>
+              <th>Funcionamiento</th>
+            </tr>`;
+        }
 
-        updateMetrics(2, 21, 26, '100.00%', [
-          { reg: 'X', centros: 2, jaulas: 21, camaras: 26, fallas: 0, func: '100.00%' }
+        updateMetrics(2, 21, 26, '100,00%', [
+          { reg: 'X', centros: 2, jaulas: 21, camaras: 26, fallas: 0, func: '100,00%' }
         ], false);
 
-        document.getElementById('donutPercent').innerText = '100%';
+        document.getElementById('donutPercent').innerText = '100,00%';
         document.getElementById('donutOpText').innerText = 'Operativas (26)';
         document.getElementById('donutFailText').innerText = 'Sin Visual (0)';
 
@@ -775,12 +832,18 @@
     }
 
     function updateMetrics(centros, jaulas, camaras, func, regionalData, isCermaq) {
-      document.getElementById('kpiCentros').innerText = centros;
-      document.getElementById('kpiJaulas').innerText = jaulas;
-      document.getElementById('kpiCamaras').innerText = camaras;
-      document.getElementById('kpiFunc').innerText = func;
+      const kpiCentros = document.getElementById('kpiCentros');
+      const kpiJaulas = document.getElementById('kpiJaulas');
+      const kpiCamaras = document.getElementById('kpiCamaras');
+      const kpiFunc = document.getElementById('kpiFunc');
+
+      if (kpiCentros) kpiCentros.innerText = centros;
+      if (kpiJaulas) kpiJaulas.innerText = jaulas;
+      if (kpiCamaras) kpiCamaras.innerText = camaras;
+      if (kpiFunc) kpiFunc.innerText = func;
 
       const tbody = document.getElementById('tableBodyRegional');
+      if (!tbody) return;
       tbody.innerHTML = '';
       regionalData.forEach(row => {
         const tr = document.createElement('tr');
@@ -810,6 +873,7 @@
 
     function renderCentersTable(centers) {
       const tbody = document.getElementById('tableBodyCenters');
+      if (!tbody) return;
       tbody.innerHTML = '';
       centers.forEach(item => {
         const tr = document.createElement('tr');
@@ -828,8 +892,7 @@
 
     // Initialize default load (Camanchaca)
     window.onload = function() {
-      document.title = 'Reporte Camanchaca 2026 Semana 34';
-      renderCentersTable(dataCamanchaca);
+      switchCompany('camanchaca');
     };
   </script>
 </body>
