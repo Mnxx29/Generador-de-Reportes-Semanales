@@ -84,8 +84,8 @@ $totalMortSinVisual = 0
 $semanaNum = "34"
 if ($excelFiles[0].Name -match "(?i)semana\s*(\d+)") {
     $semanaNum = $Matches[1]
-} elseif ($fechaPestana -eq "14-08-26" -or $fechaPestana -eq "14-08-2026") {
-    $semanaNum = "33"
+} elseif ($fechaPestana -match "(?i)semana\s*(\d+)") {
+    $semanaNum = $Matches[1]
 }
 
 # Detectar fila de encabezados
@@ -264,15 +264,19 @@ if (Test-Path $logoPath) {
 
 # Formatear Fecha de Actualización
 $mesesDict = @{ "01"="Enero"; "02"="Febrero"; "03"="Marzo"; "04"="Abril"; "05"="Mayo"; "06"="Junio"; "07"="Julio"; "08"="Agosto"; "09"="Septiembre"; "10"="Octubre"; "11"="Noviembre"; "12"="Diciembre" }
-$fechaActualizado = "21 de Agosto de 2026"
-if ($fechaPestana -match "^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$") {
+$fechaActualizado = $fechaPestana
+if ($fechaPestana -match "(\d{1,2})[-/\.\s](\d{1,2})[-/\.\s](\d{2,4})") {
     $diaStr = $Matches[1]
     $mNumStr = $Matches[2].PadLeft(2, '0')
     $anioStr = $Matches[3]
     if ($anioStr.Length -eq 2) { $anioStr = "20$anioStr" }
     if ($mesesDict.ContainsKey($mNumStr)) {
         $fechaActualizado = "$diaStr de $($mesesDict[$mNumStr]) de $anioStr"
+    } else {
+        $fechaActualizado = "$diaStr/$mNumStr/$anioStr"
     }
+} elseif (-not $fechaActualizado -or $fechaActualizado.Trim() -eq "") {
+    $fechaActualizado = $excelFiles[0].LastWriteTime.ToString("dd/MM/yyyy")
 }
 
 # ==================================================
