@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -348,28 +348,7 @@
     background-color: #ffffff;
   }
 
-  /* EXECUTIVE NOTES BOX */
-  .notes-box {
-    background-color: #f8fafc;
-    border: 1px solid #cbd5e1;
-    border-left: 4px solid #093c71;
-    border-radius: 8px;
-    padding: 8px 12px;
-    margin-bottom: 10px;
-  }
-  .notes-box-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #093c71;
-    margin-bottom: 3px;
-  }
-  .notes-box-content {
-    font-size: 10.5px;
-    color: #334155;
-    outline: none;
-    min-height: 30px;
-    line-height: 1.4;
-  }
+
 
   /* FOOTER */
   .footer {
@@ -624,17 +603,6 @@
       </tbody>
     </table>
 
-    <!-- SECCIÓN 5: NOTAS Y HALLAZGOS EJECUTIVOS -->
-    <div class="notes-box">
-      <div class="notes-box-title" style="display: flex; align-items: center; gap: 4px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Notas & Hallazgos Clave de la Semana (Haz clic para editar)
-      </div>
-      <div class="notes-box-content" contenteditable="true" id="executiveNotes">
-        Sin novedades críticas observadas durante el ciclo semanal. Monitoreo operando con normalidad.
-      </div>
-    </div>
-
     <!-- PIE DE PÁGINA PÁGINA 2 -->
     <div class="footer" id="footerText2">
       Reporte CAMANCHACA 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2
@@ -644,7 +612,6 @@
 
   <script>
     const dataCamanchaca = [
-      { centro: 'Chonos', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Cosechado' },
       { centro: 'Leucayec', reg: 'XI', jaulas: 16, camaras: 16, obs: 'En proceso de cosecha, solamente quedan con peces las jaulas 303, 306 y 308, sin problema en general' },
       { centro: 'Garrao', reg: 'XI', jaulas: 16, camaras: 16, obs: 'Comenzaron cosechar, Jaula 310 ya cosechada. Sin problema en general' },
       { centro: 'Edward', reg: 'X', jaulas: 7, camaras: 7, obs: 'sin novedad' },
@@ -652,20 +619,22 @@
       { centro: 'Punta Alta', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
       { centro: 'Benjamin', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
       { centro: 'King', reg: 'XI', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
-      { centro: 'Puerto Argentino', reg: 'X', jaulas: 14, camaras: 14, obs: 'Problemas recurrentes con NVR de Base, se comienzan a congelar las imágenes' },
-      { centro: 'Puelche', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Puerto Argentino', reg: 'X', jaulas: 14, camaras: 14, obs: 'Problemas recurrentes con NVR de Base, se comienzan a congelar las imágenes, PC Compresion no se puede acceder Camanchaca tiene que cambiar un switch.' },
+      { centro: 'Puelche', reg: 'X', jaulas: 14, camaras: 14, obs: 'DOMO 1 con problemas se tiene que reiniciar el cuadrante.' },
       { centro: 'Sur Weste Filomena', reg: 'XI', jaulas: 8, camaras: 8, obs: 'Sin novedad' },
       { centro: 'Weste Filomena', reg: 'XI', jaulas: 6, camaras: 6, obs: 'Sin novedad' },
       { centro: 'Sur Garrao', reg: 'XI', jaulas: 7, camaras: 7, obs: 'Sin novedad' },
       { centro: 'Williams 1', reg: 'XI', jaulas: 7, camaras: 7, obs: 'Sin novedad' },
       { centro: 'Pilpilehue 300', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
-      { centro: 'Pilpilehue 400', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' }
+      { centro: 'Pilpilehue 400', reg: 'X', jaulas: 14, camaras: 14, obs: 'Sin novedad' },
+      { centro: 'Ahoni 200', reg: 'X', jaulas: 12, camaras: 12, obs: 'Sin novedad' },
+      { centro: 'Ahoni 300', reg: 'X', jaulas: 12, camaras: 12, obs: 'Sin novedad' }
     ];
 
     const dataCermaq = [
       { centro: 'Unicornio Sur', reg: 'XII', jaulas: 8, camaras: 24, obs: 'No responde' },
       { centro: 'Llancacheo', reg: 'X', jaulas: 14, camaras: 42, obs: 'Tiene una pantalla en mal estado que no da imagen, no se hará el cambio ya que están apunto de cosechar' },
-      { centro: 'Aulen', reg: 'X', jaulas: 14, camaras: 42, obs: 'Sin novedad' },
+      { centro: 'Aulen', reg: 'X', jaulas: 14, camaras: 42, obs: 'Solo se ve el modulo M200' },
       { centro: 'Luchin', reg: 'X', jaulas: 12, camaras: 36, obs: 'Sin novedad' },
       { centro: 'Punta Laura', reg: 'XII', jaulas: 8, camaras: 24, obs: 'Sin novedad' },
       { centro: 'Voigue', reg: 'X', jaulas: 12, camaras: 36, obs: 'Cosechando, se utilizan cámaras de jaulas cosechadas como respaldo' },
@@ -726,17 +695,15 @@
         if (img) img.style.display = 'none';
       });
       if (header1) header1.className = 'header-container';
-      if (header2) header2.className = 'header-container';
-
-            if (company === 'camanchaca') {
-        document.title = 'Reporte Camanchaca 2026 Semana 34';
+      if (header2) header2.className = 'header-container';      if (company === 'camanchaca') {
+        document.title = 'Reporte Camanchaca 2026 Semana 35';
         if (logoCam1) logoCam1.style.display = 'block';
         if (logoCam2) logoCam2.style.display = 'block';
         if (title1) title1.innerHTML = 'CAMANCHACA &bull; REPORTE SEMANAL';
         if (title2) title2.innerHTML = 'CAMANCHACA &bull; DETALLE OPERATIVO & INSIGHTS';
-        if (footer1) footer1.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana 34 &bull; P&aacute;gina 1 de 2';
-        if (footer2) footer2.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2';
-        if (dateText) dateText.innerHTML = 'Actualizado: 21 de Agosto de 2026';
+        if (footer1) footer1.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana 35 &bull; P&aacute;gina 1 de 2';
+        if (footer2) footer2.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana 35 &bull; P&aacute;gina 2 de 2';
+        if (dateText) dateText.innerHTML = 'Actualizado: 28 de Agosto de 2026';
         
         if (tableHeaderReg) {
           tableHeaderReg.innerHTML = `
@@ -750,27 +717,27 @@
             </tr>`;
         }
 
-        updateMetrics(16, 191, 191, '100,00%', [
-          { reg: 'X', centros: 5, jaulas: 63, camaras: 63, fallas: 0, func: '100,00%' },
-          { reg: 'XI', centros: 11, jaulas: 128, camaras: 128, fallas: 0, func: '100,00%' }
+        updateMetrics(17, 201, 201, '100,00%', [
+          { reg: 'X', centros: 7, jaulas: 87, camaras: 87, fallas: 0, func: '100,00%' },
+          { reg: 'XI', centros: 10, jaulas: 114, camaras: 114, fallas: 0, func: '100,00%' }
         ], false);
 
         document.getElementById('donutPercent').innerText = '100,00%';
-        document.getElementById('donutOpText').innerText = 'Operativas (191)';
+        document.getElementById('donutOpText').innerText = 'Operativas (201)';
         document.getElementById('donutFailText').innerText = 'Sin Visual (0)';
 
         renderCentersTable(dataCamanchaca);
             } else if (company === 'cermaq') {
-        document.title = 'Reporte Cermaq 2026 Semana 34';
+        document.title = 'Reporte Cermaq 2026 Semana 35';
         if (header1) header1.classList.add('cermaq');
         if (header2) header2.classList.add('cermaq');
         if (logoCer1) logoCer1.style.display = 'block';
         if (logoCer2) logoCer2.style.display = 'block';
         if (title1) title1.innerHTML = 'CERMAQ &bull; REPORTE SEMANAL';
         if (title2) title2.innerHTML = 'CERMAQ &bull; DETALLE OPERATIVO & INSIGHTS';
-        if (footer1) footer1.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana 34 &bull; P&aacute;gina 1 de 2';
-        if (footer2) footer2.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2';
-        if (dateText) dateText.innerHTML = 'Actualizado: 21 de Agosto de 2026';
+        if (footer1) footer1.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana 35 &bull; P&aacute;gina 1 de 2';
+        if (footer2) footer2.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana 35 &bull; P&aacute;gina 2 de 2';
+        if (dateText) dateText.innerHTML = 'Actualizado: 28 de Agosto de 2026';
         
         if (tableHeaderReg) {
           tableHeaderReg.innerHTML = `
@@ -795,17 +762,17 @@
         document.getElementById('donutFailText').innerText = 'Sin Visual (2)';
 
         renderCentersTable(dataCermaq);
-                        } else if (company === 'mowi') {
-        document.title = 'Reporte Mowi 2026 Semana 34';
+            } else if (company === 'mowi') {
+        document.title = 'Reporte Mowi 2026 Semana 35';
         if (header1) header1.classList.add('mowi');
         if (header2) header2.classList.add('mowi');
         if (logoMow1) logoMow1.style.display = 'block';
         if (logoMow2) logoMow2.style.display = 'block';
         if (title1) title1.innerHTML = 'MOWI &bull; REPORTE SEMANAL';
         if (title2) title2.innerHTML = 'MOWI &bull; DETALLE OPERATIVO & INSIGHTS';
-        if (footer1) footer1.innerHTML = 'Reporte MOWI 2026 &bull; Semana 34 &bull; P&aacute;gina 1 de 2';
-        if (footer2) footer2.innerHTML = 'Reporte MOWI 2026 &bull; Semana 34 &bull; P&aacute;gina 2 de 2';
-        if (dateText) dateText.innerHTML = 'Actualizado: 21 de Agosto de 2026';
+        if (footer1) footer1.innerHTML = 'Reporte MOWI 2026 &bull; Semana 35 &bull; P&aacute;gina 1 de 2';
+        if (footer2) footer2.innerHTML = 'Reporte MOWI 2026 &bull; Semana 35 &bull; P&aacute;gina 2 de 2';
+        if (dateText) dateText.innerHTML = 'Actualizado: 28 de Agosto de 2026';
         
         if (tableHeaderReg) {
           tableHeaderReg.innerHTML = `
@@ -877,13 +844,20 @@
       tbody.innerHTML = '';
       centers.forEach(item => {
         const tr = document.createElement('tr');
+        let badgeClass = 'badge-green';
+        const obsLower = item.obs.toLowerCase();
+        if (obsLower.includes('cosecha') || obsLower.includes('cosechado')) {
+          badgeClass = 'badge-amber';
+        } else if (obsLower.includes('falla') || obsLower.includes('intermitencia') || obsLower.includes('no responde') || obsLower.includes('problema') || obsLower.includes('sin visual') || obsLower.includes('mal estado')) {
+          badgeClass = 'badge-red';
+        }
         tr.innerHTML = `
           <td style="text-align: left; font-weight: 700;">${item.centro}</td>
           <td>${item.reg}</td>
           <td>${item.jaulas}</td>
           <td>${item.camaras}</td>
           <td style="text-align: left;">
-            <input class="editable-obs" type="text" value="${item.obs}" />
+            <span class="badge-status ${badgeClass}" style="white-space: normal; word-wrap: break-word; display: inline-block; max-width: 100%; line-height: 1.4;">${item.obs}</span>
           </td>
         `;
         tbody.appendChild(tr);
