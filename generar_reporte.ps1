@@ -328,8 +328,8 @@ if (Test-Path $reporteHtmlPath) {
         if (header2) header2.classList.add('cermaq');
         if (logoCer1) logoCer1.style.display = 'block';
         if (logoCer2) logoCer2.style.display = 'block';
-        if (title1) title1.innerHTML = 'CERMAQ &bull; REPORTE SEMANAL';
-        if (title2) title2.innerHTML = 'CERMAQ &bull; DETALLE OPERATIVO & INSIGHTS';
+        if (title1) title1.innerHTML = 'REPORTE SEMANAL';
+        if (title2) title2.innerHTML = 'DETALLE OPERATIVO & INSIGHTS';
         if (footer1) footer1.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2';
         if (footer2) footer2.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2';
         if (dateText) dateText.innerHTML = 'Actualizado: $fechaActualizado';
@@ -364,8 +364,8 @@ if (Test-Path $reporteHtmlPath) {
         document.title = 'Reporte Camanchaca 2026 Semana $semanaNum';
         if (logoCam1) logoCam1.style.display = 'block';
         if (logoCam2) logoCam2.style.display = 'block';
-        if (title1) title1.innerHTML = 'CAMANCHACA &bull; REPORTE SEMANAL';
-        if (title2) title2.innerHTML = 'CAMANCHACA &bull; DETALLE OPERATIVO & INSIGHTS';
+        if (title1) title1.innerHTML = 'REPORTE SEMANAL';
+        if (title2) title2.innerHTML = 'DETALLE OPERATIVO & INSIGHTS';
         if (footer1) footer1.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2';
         if (footer2) footer2.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2';
         if (dateText) dateText.innerHTML = 'Actualizado: $fechaActualizado';
@@ -401,8 +401,8 @@ if (Test-Path $reporteHtmlPath) {
         if (header2) header2.classList.add('mowi');
         if (logoMow1) logoMow1.style.display = 'block';
         if (logoMow2) logoMow2.style.display = 'block';
-        if (title1) title1.innerHTML = 'MOWI &bull; REPORTE SEMANAL';
-        if (title2) title2.innerHTML = 'MOWI &bull; DETALLE OPERATIVO & INSIGHTS';
+        if (title1) title1.innerHTML = 'REPORTE SEMANAL';
+        if (title2) title2.innerHTML = 'DETALLE OPERATIVO & INSIGHTS';
         if (footer1) footer1.innerHTML = 'Reporte MOWI 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2';
         if (footer2) footer2.innerHTML = 'Reporte MOWI 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2';
         if (dateText) dateText.innerHTML = 'Actualizado: $fechaActualizado';
@@ -713,7 +713,7 @@ $htmlTemplate = @"
       $logoSvg
     </div>
     <div class="header-titles">
-      <div class="header-main-title">$($Empresa.ToUpper()) &bull; REPORTE SEMANAL</div>
+      <div class="header-main-title">REPORTE SEMANAL</div>
       <div class="header-subtitle">
         <span>Actualizado: $fechaActualizado</span>
         <span class="badge-pill">Confidencial</span>
@@ -870,14 +870,14 @@ $htmlTemplate = @"
   </div>
 
   <div class="footer">
-    Reporte $($Empresa.ToUpper()) 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2
+    Reporte $($currentEmpresa.ToUpper()) 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2
   </div>
 
   <!-- SALTO DE PÁGINA PARA PAGINA 2 (DETALLE DE CENTROS E INSIGHTS) -->
   <div style="page-break-before: always; break-before: page; margin-top: 20px;"></div>
 
   <div class="header-container" style="padding: 8px 16px;">
-    <div class="header-main-title" style="font-size: 18px;">$($Empresa.ToUpper()) &bull; DETALLE OPERATIVO DE CENTROS & INSIGHTS</div>
+    <div class="header-main-title" style="font-size: 18px;">DETALLE OPERATIVO DE CENTROS & INSIGHTS</div>
     <div class="header-subtitle">
       <span>Semana $semanaNum</span>
     </div>
