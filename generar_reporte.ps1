@@ -309,11 +309,7 @@ if (Test-Path $reporteHtmlPath) {
                 $rFunc = [Math]::Round(((($rData.Camaras - $rData.SinVisual - $rData.MortSinVisual) / $rData.Camaras) * 100), 2)
             }
             $rFuncStr = "{0:N2}%" -f $rFunc
-            if ($currentEmpresa -eq "Cermaq") {
-                $regionalJsItems += "          { reg: '$rKey', centros: $($rData.Centros), jaulas: $($rData.Jaulas), camaras: $($rData.Camaras), fallas: $($rData.SinVisual), mortFallas: $($rData.MortSinVisual), func: '$rFuncStr' }"
-            } else {
-                $regionalJsItems += "          { reg: '$rKey', centros: $($rData.Centros), jaulas: $($rData.Jaulas), camaras: $($rData.Camaras), fallas: $($rData.SinVisual), func: '$rFuncStr' }"
-            }
+            $regionalJsItems += "          { reg: '$rKey', centros: $($rData.Centros), jaulas: $($rData.Jaulas), camaras: $($rData.Camaras), fallas: $($rData.SinVisual), mortFallas: $($rData.MortSinVisual), func: '$rFuncStr' }"
         }
         $regionalJsStr = "[$nl" + ($regionalJsItems -join ",$nl") + "$nl        ]"
 
@@ -377,12 +373,13 @@ if (Test-Path $reporteHtmlPath) {
               <th>Centros</th>
               <th>Jaulas</th>
               <th>Total C&aacute;maras</th>
-              <th>C&aacute;maras (Sin Visual)</th>
+              <th>C&aacute;m. Est&aacute;ndar (Falla)</th>
+              <th>C&aacute;m. Mortalidad (Falla)</th>
               <th>Funcionamiento</th>
             </tr>``;
         }
 
-        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, false);
+        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, true);
 
         document.getElementById('donutPercent').innerText = '$funcGlobalStr';
         document.getElementById('donutOpText').innerText = 'Operativas ($totalOperativas)';
@@ -414,12 +411,13 @@ if (Test-Path $reporteHtmlPath) {
               <th>Centros</th>
               <th>Jaulas</th>
               <th>Total C&aacute;maras</th>
-              <th>C&aacute;maras (Sin Visual)</th>
+              <th>C&aacute;m. Est&aacute;ndar (Falla)</th>
+              <th>C&aacute;m. Mortalidad (Falla)</th>
               <th>Funcionamiento</th>
             </tr>``;
         }
 
-        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, false);
+        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, true);
 
         document.getElementById('donutPercent').innerText = '$funcGlobalStr';
         document.getElementById('donutOpText').innerText = 'Operativas ($totalOperativas)';
@@ -449,8 +447,7 @@ foreach ($rKey in $regiones.Keys | Sort-Object) {
     }
     $rFuncStr = "{0:N2}%" -f $rFunc
 
-    if ($Empresa -eq "Cermaq") {
-        $tableRowsHtml += @"
+    $tableRowsHtml += @"
       <tr>
         <td><strong>$rKey</strong></td>
         <td>$($rData.Centros)</td>
@@ -461,33 +458,10 @@ foreach ($rKey in $regiones.Keys | Sort-Object) {
         <td><span class="status-badge-green">$rFuncStr</span></td>
       </tr>
 "@
-    } else {
-        $tableRowsHtml += @"
-      <tr>
-        <td><strong>$rKey</strong></td>
-        <td>$($rData.Centros)</td>
-        <td>$($rData.Jaulas)</td>
-        <td>$($rData.Camaras)</td>
-        <td>$($rData.SinVisual)</td>
-        <td><span class="status-badge-green">$rFuncStr</span></td>
-      </tr>
-"@
-    }
 }
 
 # Encabezados de tabla según empresa
 $tableHeaderHtml = @"
-      <tr>
-        <th>Regi&oacute;n</th>
-        <th>Centros</th>
-        <th>Jaulas</th>
-        <th>Total C&aacute;maras</th>
-        <th>C&aacute;maras (Sin Visual)</th>
-        <th>Funcionamiento</th>
-      </tr>
-"@
-if ($currentEmpresa -eq "Cermaq") {
-    $tableHeaderHtml = @"
       <tr>
         <th>Regi&oacute;n</th>
         <th>Centros</th>
@@ -498,7 +472,6 @@ if ($currentEmpresa -eq "Cermaq") {
         <th>Funcionamiento</th>
       </tr>
 "@
-}
 
 # --- GENERADOR DINÁMICO DE GRÁFICOS SVG ---
 $totalFalladas = $totalSinVisual + $totalMortSinVisual

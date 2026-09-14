@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -434,7 +434,8 @@
           <th>Centros</th>
           <th>Jaulas</th>
           <th>Total C&aacute;maras</th>
-          <th>C&aacute;maras (Sin Visual)</th>
+          <th>C&aacute;m. Est&aacute;ndar (Falla)</th>
+          <th>C&aacute;m. Mortalidad (Falla)</th>
           <th>Funcionamiento</th>
         </tr>
       </thead>
@@ -660,15 +661,16 @@
               <th>Centros</th>
               <th>Jaulas</th>
               <th>Total C&aacute;maras</th>
-              <th>C&aacute;maras (Sin Visual)</th>
+              <th>C&aacute;m. Est&aacute;ndar (Falla)</th>
+              <th>C&aacute;m. Mortalidad (Falla)</th>
               <th>Funcionamiento</th>
             </tr>`;
         }
 
         updateMetrics(17, 199, 199, '100,00%', [
-          { reg: 'X', centros: 8, jaulas: 101, camaras: 101, fallas: 0, func: '100,00%' },
-          { reg: 'XI', centros: 9, jaulas: 98, camaras: 98, fallas: 0, func: '100,00%' }
-        ], false);
+          { reg: 'X', centros: 8, jaulas: 101, camaras: 101, fallas: 0, mortFallas: 0, func: '100,00%' },
+          { reg: 'XI', centros: 9, jaulas: 98, camaras: 98, fallas: 0, mortFallas: 0, func: '100,00%' }
+        ], true);
 
         document.getElementById('donutPercent').innerText = '100,00%';
         document.getElementById('donutOpText').innerText = 'Operativas (199)';
@@ -729,14 +731,15 @@
               <th>Centros</th>
               <th>Jaulas</th>
               <th>Total C&aacute;maras</th>
-              <th>C&aacute;maras (Sin Visual)</th>
+              <th>C&aacute;m. Est&aacute;ndar (Falla)</th>
+              <th>C&aacute;m. Mortalidad (Falla)</th>
               <th>Funcionamiento</th>
             </tr>`;
         }
 
         updateMetrics(2, 21, 26, '100,00%', [
-          { reg: 'X', centros: 2, jaulas: 21, camaras: 26, fallas: 0, func: '100,00%' }
-        ], false);
+          { reg: 'X', centros: 2, jaulas: 21, camaras: 26, fallas: 0, mortFallas: 0, func: '100,00%' }
+        ], true);
 
         document.getElementById('donutPercent').innerText = '100,00%';
         document.getElementById('donutOpText').innerText = 'Operativas (26)';
@@ -762,26 +765,15 @@
       tbody.innerHTML = '';
       regionalData.forEach(row => {
         const tr = document.createElement('tr');
-        if (isCermaq) {
-          tr.innerHTML = `
-            <td><strong>${row.reg}</strong></td>
-            <td>${row.centros}</td>
-            <td>${row.jaulas}</td>
-            <td>${row.camaras}</td>
-            <td>${row.fallas}</td>
-            <td>${row.mortFallas}</td>
-            <td><span class="badge-status badge-green">${row.func}</span></td>
-          `;
-        } else {
-          tr.innerHTML = `
-            <td><strong>${row.reg}</strong></td>
-            <td>${row.centros}</td>
-            <td>${row.jaulas}</td>
-            <td>${row.camaras}</td>
-            <td>${row.fallas}</td>
-            <td><span class="badge-status badge-green">${row.func}</span></td>
-          `;
-        }
+        tr.innerHTML = `
+          <td><strong>${row.reg}</strong></td>
+          <td>${row.centros}</td>
+          <td>${row.jaulas}</td>
+          <td>${row.camaras}</td>
+          <td>${row.fallas ?? 0}</td>
+          <td>${row.mortFallas ?? 0}</td>
+          <td><span class="badge-status badge-green">${row.func}</span></td>
+        `;
         tbody.appendChild(tr);
       });
 
