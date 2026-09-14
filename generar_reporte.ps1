@@ -219,7 +219,7 @@ foreach ($cItem in $centrosList) {
         <td>$cReg</td>
         <td>$cJau</td>
         <td>$cCam</td>
-        <td style="text-align: left;"><span style="display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; $badgeStyle">$cObs</span></td>
+        <td style="text-align: left;"><span style="display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; line-height: 1.25; white-space: normal; word-wrap: break-word; max-width: 100%; $badgeStyle">$cObs</span></td>
       </tr>
 "@
 }
@@ -486,7 +486,7 @@ $tableHeaderHtml = @"
         <th>Funcionamiento</th>
       </tr>
 "@
-if ($Empresa -eq "Cermaq") {
+if ($currentEmpresa -eq "Cermaq") {
     $tableHeaderHtml = @"
       <tr>
         <th>Regi&oacute;n</th>
@@ -500,13 +500,203 @@ if ($Empresa -eq "Cermaq") {
 "@
 }
 
+# --- GENERADOR DINÁMICO DE GRÁFICOS SVG ---
+$totalFalladas = $totalSinVisual + $totalMortSinVisual
+$totalOperativas = [Math]::Max(0, ($totalCamaras - $totalFalladas))
+$regionKeys = @($regiones.Keys | Sort-Object)
+$numRegiones = $regionKeys.Count
+if ($numRegiones -eq 0) { $numRegiones = 1 }
+
+# 1. Gráfico: Centros Activos por Región
+$maxCentros = 1
+foreach ($rk in $regionKeys) {
+    if ($regiones[$rk].Centros -gt $maxCentros) { $maxCentros = $regiones[$rk].Centros }
+}
+$barColors = @("#1e62c0", "#48c6ff", "#00a86b", "#9333ea")
+$barsCentrosSvg = ""
+for ($ri = 0; $ri -lt $regionKeys.Count; $ri++) {
+    $rk = $regionKeys[$ri]
+    $rCentros = $regiones[$rk].Centros
+    $bColor = $barColors[$ri % $barColors.Count]
+    
+    if ($numRegiones -eq 1) {
+        $bw = 60
+        $bx = 100
+    } elseif ($numRegiones -eq 2) {
+        $bw = 50
+        $bx = if ($ri -eq 0) { 60 } else { 150 }
+    } else {
+        $bw = [Math]::Max(25, [Math]::Min(45, [int](180 / $numRegiones)))
+        $step = [int](200 / $numRegiones)
+        $bx = 35 + ($ri * $step)
+    }
+    
+    $bh = [Math]::Max(10, [int][Math]::Round(($rCentros / $maxCentros) * 70))
+    $by = 95 - $bh
+    $tx = $bx + [int]($bw / 2)
+    
+    $barsCentrosSvg += @"
+        <rect x="$bx" y="$by" width="$bw" height="$bh" fill="$bColor" rx="3" />
+        <text x="$tx" y="$($by - 5)" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">$rCentros</text>
+        <text x="$tx" y="110" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">$rk</text>
+"@
+}
+
+$svgChartCentros = @"
+      <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
+        <line x1="25" y1="15" x2="245" y2="15" stroke="#e2e8f0" stroke-dasharray="3,3" />
+        <line x1="25" y1="45" x2="245" y2="45" stroke="#e2e8f0" stroke-dasharray="3,3" />
+        <line x1="25" y1="75" x2="245" y2="75" stroke="#e2e8f0" stroke-dasharray="3,3" />
+        <line x1="25" y1="95" x2="245" y2="95" stroke="#cbd5e1" stroke-width="1" />
+$barsCentrosSvg
+      </svg>
+"@
+
+# 2. Gráfico: Funcionamiento Promedio por Región
+$barsFuncSvg = ""
+for ($ri = 0; $ri -lt $regionKeys.Count; $ri++) {
+    $rk = $regionKeys[$ri]
+    $rData = $regiones[$rk]
+    $rFunc = 100.00
+    if ($rData.Camaras -gt 0) {
+        $rFunc = [Math]::Round(((($rData.Camaras - $rData.SinVisual - $rData.MortSinVisual) / $rData.Camaras) * 100), 2)
+    }
+    $rFuncStr = "{0:N2}%" -f $rFunc
+    $rFuncDisplay = if ($rFunc -eq 100.00) { "100%" } else { $rFuncStr }
+    
+    $fColor = "#00a86b"
+    if ($rFunc -lt 85.00) { $fColor = "#ef4444" }
+    elseif ($rFunc -lt 95.00) { $fColor = "#f59e0b" }
+    
+    if ($numRegiones -eq 1) {
+        $bw = 60
+        $bx = 100
+    } elseif ($numRegiones -eq 2) {
+        $bw = 50
+        $bx = if ($ri -eq 0) { 65 } else { 155 }
+    } else {
+        $bw = [Math]::Max(25, [Math]::Min(45, [int](180 / $numRegiones)))
+        $step = [int](200 / $numRegiones)
+        $bx = 35 + ($ri * $step)
+    }
+    
+    $bh = [Math]::Max(10, [int][Math]::Round(($rFunc / 100.0) * 75))
+    $by = 95 - $bh
+    $tx = $bx + [int]($bw / 2)
+    
+    $barsFuncSvg += @"
+        <rect x="$bx" y="$by" width="$bw" height="$bh" fill="$fColor" rx="3" />
+        <text x="$tx" y="$($by - 5)" font-size="10" font-weight="bold" fill="$fColor" text-anchor="middle">$rFuncDisplay</text>
+        <text x="$tx" y="110" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">$rk</text>
+"@
+}
+
+$svgChartFunc = @"
+      <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
+        <line x1="25" y1="20" x2="245" y2="20" stroke="#e2e8f0" stroke-dasharray="3,3" />
+        <line x1="25" y1="55" x2="245" y2="55" stroke="#e2e8f0" stroke-dasharray="3,3" />
+        <line x1="25" y1="95" x2="245" y2="95" stroke="#cbd5e1" stroke-width="1" />
+$barsFuncSvg
+      </svg>
+"@
+
+# 3. Gráfico: Estado del Parque de Cámaras (Donut)
+$pctOp = 1.0
+if ($totalCamaras -gt 0) {
+    $pctOp = $totalOperativas / $totalCamaras
+}
+$cCircumference = 226.19
+$dashVal = [Math]::Round($pctOp * $cCircumference, 1)
+
+$donutGreenStroke = ""
+if ($pctOp -ge 1.0) {
+    $donutGreenStroke = @"
+        <circle cx="75" cy="58" r="36" fill="none" stroke="#00a86b" stroke-width="14" />
+"@
+} else {
+    $donutGreenStroke = @"
+        <circle cx="75" cy="58" r="36" fill="none" stroke="#ef4444" stroke-width="14" />
+        <circle cx="75" cy="58" r="36" fill="none" stroke="#00a86b" stroke-width="14" stroke-dasharray="$dashVal $cCircumference" stroke-dashoffset="0" transform="rotate(-90 75 58)" />
+"@
+}
+
+$svgChartDonut = @"
+      <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
+$donutGreenStroke
+        <text x="75" y="56" font-size="12" font-weight="bold" fill="#0f2744" text-anchor="middle">$funcGlobalStr</text>
+        <text x="75" y="68" font-size="8.5" fill="#64748b" text-anchor="middle">Operativo</text>
+
+        <circle cx="140" cy="35" r="4.5" fill="#00a86b" />
+        <text x="150" y="38" font-size="9.5" font-weight="600" fill="#334155">Operativas ($totalOperativas)</text>
+
+        <circle cx="140" cy="58" r="4.5" fill="#f59e0b" />
+        <text x="150" y="61" font-size="9.5" font-weight="600" fill="#334155">Respaldo (OK)</text>
+
+        <circle cx="140" cy="81" r="4.5" fill="#ef4444" />
+        <text x="150" y="84" font-size="9.5" font-weight="600" fill="#334155">Sin Visual ($totalFalladas)</text>
+      </svg>
+"@
+
+# 4. Gráfico: Relación Jaulas vs Cámaras
+$maxValJC = 1
+foreach ($rk in $regionKeys) {
+    if ($regiones[$rk].Jaulas -gt $maxValJC) { $maxValJC = $regiones[$rk].Jaulas }
+    if ($regiones[$rk].Camaras -gt $maxValJC) { $maxValJC = $regiones[$rk].Camaras }
+}
+
+$barsJCSvg = ""
+for ($ri = 0; $ri -lt $regionKeys.Count; $ri++) {
+    $rk = $regionKeys[$ri]
+    $rJau = $regiones[$rk].Jaulas
+    $rCam = $regiones[$rk].Camaras
+    
+    if ($numRegiones -eq 1) {
+        $bw = 25
+        $jx = 95
+        $cx = 125
+        $tx = 122
+    } elseif ($numRegiones -eq 2) {
+        $bw = 20
+        if ($ri -eq 0) { $jx = 50; $cx = 73; $tx = 71 }
+        else { $jx = 145; $cx = 168; $tx = 166 }
+    } else {
+        $bw = [Math]::Max(12, [int](80 / $numRegiones))
+        $step = [int](200 / $numRegiones)
+        $jx = 35 + ($ri * $step)
+        $cx = $jx + $bw + 3
+        $tx = $jx + $bw
+    }
+    
+    $jh = [Math]::Max(8, [int][Math]::Round(($rJau / $maxValJC) * 65))
+    $ch = [Math]::Max(8, [int][Math]::Round(($rCam / $maxValJC) * 65))
+    $jy = 95 - $jh
+    $cy = 95 - $ch
+    
+    $barsJCSvg += @"
+        <rect x="$jx" y="$jy" width="$bw" height="$jh" fill="#093c71" rx="2" />
+        <rect x="$cx" y="$cy" width="$bw" height="$ch" fill="#0099e5" rx="2" />
+        <text x="$tx" y="110" font-size="10" font-weight="bold" fill="#0f2744" text-anchor="middle">$rk</text>
+"@
+}
+
+$svgChartJaulasCamaras = @"
+      <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
+        <line x1="25" y1="95" x2="245" y2="95" stroke="#cbd5e1" stroke-width="1" />
+$barsJCSvg
+        <rect x="180" y="8" width="9" height="9" fill="#093c71" rx="1" />
+        <text x="193" y="15" font-size="8.5" fill="#475569">Jaulas</text>
+        <rect x="220" y="8" width="9" height="9" fill="#0099e5" rx="1" />
+        <text x="233" y="15" font-size="8.5" fill="#475569">C&aacute;m.</text>
+      </svg>
+"@
+
 # Construir HTML Completo
 $htmlTemplate = @"
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Reporte $($Empresa) 2026 Semana $($semanaNum)</title>
+<title>Reporte $($currentEmpresa) 2026 Semana $($semanaNum)</title>
 <style>
   @page {
     size: A4 portrait;
@@ -518,10 +708,10 @@ $htmlTemplate = @"
   }
   body {
     margin: 0;
-    padding: 8mm 12mm;
+    padding: 6mm 10mm;
     color: #0f2744;
     background-color: #ffffff;
-    font-size: 13px;
+    font-size: 12px;
     -webkit-print-color-adjust: exact;
   }
   
@@ -578,8 +768,8 @@ $htmlTemplate = @"
   .section-header {
     display: flex;
     align-items: center;
-    margin-top: 14px;
-    margin-bottom: 10px;
+    margin-top: 10px;
+    margin-bottom: 6px;
   }
   .section-bar {
     width: 5px;
@@ -640,17 +830,18 @@ $htmlTemplate = @"
   .data-table th {
     background-color: $accentColor;
     color: #ffffff;
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 700;
     text-transform: uppercase;
-    padding: 9px 12px;
+    padding: 5px 8px;
     text-align: center;
     letter-spacing: 0.4px;
   }
   .data-table td {
-    padding: 9px 12px;
+    padding: 3px 6px;
     text-align: center;
-    font-size: 12px;
+    font-size: 10.5px;
+    line-height: 1.25;
     border-bottom: 1px solid #e2e8f0;
     background-color: #ffffff;
     color: #1e293b;
@@ -767,75 +958,22 @@ $htmlTemplate = @"
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
     <div class="chart-box">
       <div class="chart-title">Centros Activos por Regi&oacute;n</div>
-      <svg width="100%" height="135" viewBox="0 0 260 135" xmlns="http://www.w3.org/2000/svg">
-        <line x1="30" y1="15" x2="240" y2="15" stroke="#e2e8f0" stroke-dasharray="3,3" />
-        <line x1="30" y1="50" x2="240" y2="50" stroke="#e2e8f0" stroke-dasharray="3,3" />
-        <line x1="30" y1="85" x2="240" y2="85" stroke="#e2e8f0" stroke-dasharray="3,3" />
-        <line x1="30" y1="110" x2="240" y2="110" stroke="#cbd5e1" stroke-width="1" />
-        
-        <rect x="60" y="20" width="50" height="90" fill="#1e62c0" rx="3" />
-        <text x="85" y="15" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">11</text>
-        <text x="85" y="125" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">XI</text>
-
-        <rect x="150" y="65" width="50" height="45" fill="#48c6ff" rx="3" />
-        <text x="175" y="60" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">5</text>
-        <text x="175" y="125" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">X</text>
-      </svg>
+      $svgChartCentros
     </div>
 
     <div class="chart-box">
       <div class="chart-title">Funcionamiento Promedio por Regi&oacute;n</div>
-      <svg width="100%" height="135" viewBox="0 0 260 135" xmlns="http://www.w3.org/2000/svg">
-        <line x1="35" y1="20" x2="240" y2="20" stroke="#e2e8f0" stroke-dasharray="3,3" />
-        <line x1="35" y1="60" x2="240" y2="60" stroke="#e2e8f0" stroke-dasharray="3,3" />
-        <line x1="35" y1="110" x2="240" y2="110" stroke="#cbd5e1" stroke-width="1" />
-
-        <rect x="65" y="20" width="50" height="90" fill="#00a86b" rx="3" />
-        <text x="90" y="15" font-size="10" font-weight="bold" fill="#00a86b" text-anchor="middle">$funcGlobalStr</text>
-        <text x="90" y="125" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">XI</text>
-
-        <rect x="155" y="20" width="50" height="90" fill="#00a86b" rx="3" />
-        <text x="180" y="15" font-size="10" font-weight="bold" fill="#0f2744" text-anchor="middle">$funcGlobalStr</text>
-        <text x="180" y="125" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">X</text>
-      </svg>
+      $svgChartFunc
     </div>
 
     <div class="chart-box">
       <div class="chart-title">Estado del Parque de C&aacute;maras</div>
-      <svg width="100%" height="135" viewBox="0 0 260 135" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="80" cy="65" r="42" fill="none" stroke="#00a86b" stroke-width="16" />
-        <text x="80" y="62" font-size="13" font-weight="bold" fill="#0f2744" text-anchor="middle">$funcGlobalStr</text>
-        <text x="80" y="76" font-size="9" fill="#64748b" text-anchor="middle">Operativo</text>
-
-        <circle cx="145" cy="40" r="5" fill="#00a86b" />
-        <text x="156" y="44" font-size="10" font-weight="600" fill="#334155">Operativas ($totalCamaras)</text>
-
-        <circle cx="145" cy="65" r="5" fill="#f59e0b" />
-        <text x="156" y="69" font-size="10" font-weight="600" fill="#334155">Respaldo (OK)</text>
-
-        <circle cx="145" cy="90" r="5" fill="#ef4444" />
-        <text x="156" y="94" font-size="10" font-weight="600" fill="#334155">Sin Visual ($totalSinVisual)</text>
-      </svg>
+      $svgChartDonut
     </div>
 
     <div class="chart-box">
       <div class="chart-title">Relaci&oacute;n Jaulas vs C&aacute;maras</div>
-      <svg width="100%" height="135" viewBox="0 0 260 135" xmlns="http://www.w3.org/2000/svg">
-        <line x1="30" y1="110" x2="240" y2="110" stroke="#cbd5e1" stroke-width="1" />
-
-        <rect x="50" y="30" width="22" height="80" fill="#093c71" rx="2" />
-        <rect x="75" y="30" width="22" height="80" fill="#0099e5" rx="2" />
-        <text x="73" y="125" font-size="10" font-weight="bold" fill="#0f2744" text-anchor="middle">XI</text>
-
-        <rect x="145" y="65" width="22" height="45" fill="#093c71" rx="2" />
-        <rect x="170" y="65" width="22" height="45" fill="#0099e5" rx="2" />
-        <text x="168" y="125" font-size="10" font-weight="bold" fill="#0f2744" text-anchor="middle">X</text>
-
-        <rect x="180" y="10" width="10" height="10" fill="#093c71" rx="1" />
-        <text x="195" y="18" font-size="9" fill="#475569">Jaulas</text>
-        <rect x="220" y="10" width="10" height="10" fill="#0099e5" rx="1" />
-        <text x="235" y="18" font-size="9" fill="#475569">C&aacute;m.</text>
-      </svg>
+      $svgChartJaulasCamaras
     </div>
   </div>
 
@@ -874,28 +1012,28 @@ $htmlTemplate = @"
   </div>
 
   <!-- SALTO DE PÁGINA PARA PAGINA 2 (DETALLE DE CENTROS E INSIGHTS) -->
-  <div style="page-break-before: always; break-before: page; margin-top: 20px;"></div>
+  <div style="page-break-before: always; break-before: page; margin-top: 10px;"></div>
 
-  <div class="header-container" style="padding: 8px 16px;">
-    <div class="header-main-title" style="font-size: 18px;">DETALLE OPERATIVO DE CENTROS & INSIGHTS</div>
+  <div class="header-container" style="padding: 5px 14px; margin-bottom: 8px;">
+    <div class="header-main-title" style="font-size: 16px;">DETALLE OPERATIVO DE CENTROS & INSIGHTS</div>
     <div class="header-subtitle">
       <span>Semana $semanaNum</span>
     </div>
   </div>
 
-  <div class="section-header">
+  <div class="section-header" style="margin-top: 6px; margin-bottom: 6px;">
     <div class="section-bar"></div>
     <div class="section-title">Detalle por Centro & Insights Operativos</div>
   </div>
 
-  <table class="data-table">
+  <table class="data-table" style="margin-bottom: 8px;">
     <thead>
       <tr>
-        <th style="text-align: left;">Centro de Cultivo</th>
-        <th>Regi&oacute;n</th>
-        <th>Jaulas</th>
-        <th>C&aacute;maras</th>
-        <th style="text-align: left;">Estado / Observaciones & Insights</th>
+        <th style="text-align: left; width: 20%;">Centro de Cultivo</th>
+        <th style="width: 8%;">Regi&oacute;n</th>
+        <th style="width: 8%;">Jaulas</th>
+        <th style="width: 8%;">C&aacute;maras</th>
+        <th style="text-align: left; width: 56%;">Estado / Observaciones & Insights</th>
       </tr>
     </thead>
     <tbody>
