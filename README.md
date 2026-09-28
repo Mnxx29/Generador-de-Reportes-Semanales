@@ -1,52 +1,62 @@
 # 📊 Generador de Reportes Semanales de Monitoreo
 
-Sistema automatizado para la actualización de tableros interactivos y generación de reportes semanales ejecutivos (Camanchaca, Cermaq, Mowi).
+Sistema para leer los archivos Excel semanales de Camanchaca, Cermaq y Mowi, calcular métricas operativas, actualizar un tablero HTML local y generar reportes PDF.
 
----
+## Requisitos
 
-## 📖 Flujo de Trabajo Semanal
+- Windows PowerShell 5.1 o PowerShell 7.
+- Microsoft Excel de escritorio, utilizado mediante automatización COM.
+- Microsoft Edge para la generación directa de PDF.
 
-```
-[1. Copiar Excels] ➔ [2. Ejecutar .\generar_reporte.ps1] ➔ [3. Abrir reporte_semanal.html] ➔ [4. Guardar / Imprimir PDF]
-```
+## Uso semanal
 
-### 📋 Paso 1: Guardar los archivos Excel
-Copia los 3 archivos Excel actualizados de la semana (ej: `Reporte Camanchaca 2026 semana 35.xlsx`) dentro de la carpeta `Datos_Excel/`.
-*(No es necesario borrar los anteriores, el script detecta automáticamente el archivo más reciente).*
+1. Copia los Excel actualizados dentro de `Datos_Excel/`. El nombre debe incluir la empresa, el año y la semana; por ejemplo, `Reporte Camanchaca 2027 Semana 12.xlsx`.
+2. Ejecuta el generador:
 
-### ⚡ Paso 2: Actualizar la Web desde PowerShell
-Abre PowerShell en la carpeta del proyecto y ejecuta:
+   ```powershell
+   .\generar_reporte.ps1
+   ```
+
+3. Abre `reporte_semanal.html`, revisa las métricas y usa **Guardar PDF / Imprimir** si necesitas exportarlo desde el navegador.
+
+El script selecciona automáticamente el archivo más reciente de cada empresa y la primera pestaña distinta de `Consolidado`.
+
+También puedes procesar una sola empresa:
+
 ```powershell
-.\generar_reporte.ps1
+.\generar_reporte.ps1 -Empresa Cermaq
 ```
-Este comando lee los nuevos libros de Excel y actualiza la página web interactiva [`reporte_semanal.html`](./reporte_semanal.html).
 
-### 🌐 Paso 3: Previsualizar e Imprimir a PDF
-1. Abre [`reporte_semanal.html`](./reporte_semanal.html) en Chrome o Edge.
-2. Navega entre las empresas (**Camanchaca**, **Cermaq**, **Mowi**) usando la barra superior.
-3. Revisa métricas, observaciones y edita notas si lo requieres.
-4. Presiona el botón **🖨️ Guardar PDF / Imprimir** para exportar cada informe.
+## Generación directa de PDF
 
----
-
-## 💡 Opción Avanzada: Generación Directa de PDFs por Consola
-Si deseas generar directamente los archivos PDF en `Reportes_PDF/Semana_XX/` sin pasar por la web:
 ```powershell
 .\generar_reporte.ps1 -GenerarPDF
 ```
 
----
+Los documentos se guardan en `Reportes_PDF/Semana_XX/`. El año y la semana se obtienen del nombre del Excel o de la pestaña seleccionada.
 
-## 🛠️ Estructura del Proyecto
-```
+## Privacidad de los datos
+
+`reporte_semanal.template.html` contiene únicamente la estructura visual y no incluye información operacional. Al ejecutar el script se crea `reporte_semanal.html` con los datos de los Excel.
+
+Los siguientes elementos se mantienen fuera de Git porque pueden contener información sensible:
+
+- Archivos Excel.
+- Reportes PDF.
+- `reporte_semanal.html` generado.
+- Archivos temporales de renderizado.
+
+Antes de publicar cambios, comprueba siempre `git status` para confirmar que solo se estén incluyendo código, documentación, plantilla y recursos gráficos.
+
+## Estructura
+
+```text
 Generador de Reportes Semanales/
 ├── assets/
 │   └── logos/
-│       ├── Camanchaca logo.png
-│       ├── Cermaq logo.jpg
-│       └── Mowi logo.png
-├── Datos_Excel/            # Archivos Excel semanales (ignorados en git)
-├── Reportes_PDF/           # Reportes generados en PDF (ignorados en git)
-├── generar_reporte.ps1     # Script procesador de datos
-└── reporte_semanal.html    # Aplicación Web / Dashboard interactivo
+├── Datos_Excel/                    # Entrada local; ignorada por Git
+├── Reportes_PDF/                   # Salida local; ignorada por Git
+├── generar_reporte.ps1             # Procesamiento y generación
+├── reporte_semanal.template.html   # Plantilla versionada sin datos reales
+└── reporte_semanal.html            # Salida generada; ignorada por Git
 ```

@@ -15,6 +15,9 @@ Reportes_PDF/*
 temp_report.html
 *.tmp
 
+# Salida HTML generada localmente (contiene datos operativos)
+/reporte_semanal.html
+
 # Archivos del sistema u OS
 .DS_Store
 Thumbs.db

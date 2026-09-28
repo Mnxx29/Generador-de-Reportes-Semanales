@@ -23,6 +23,18 @@ $ErrorActionPreference = "Stop"
 if (-not $workingDir) { $workingDir = $PSScriptRoot }
 if (-not $workingDir) { $workingDir = "c:\Users\Omnifish\Desktop\Generador de Reportes Semanales" }
 
+$templateHtmlPath = Join-Path $workingDir "reporte_semanal.template.html"
+$reporteHtmlPath = Join-Path $workingDir "reporte_semanal.html"
+
+if (-not (Test-Path -LiteralPath $templateHtmlPath)) {
+    throw "No se encontró la plantilla requerida: $templateHtmlPath"
+}
+
+# Cada ejecución comienza desde una plantilla sin datos operativos. El archivo
+# generado queda fuera de Git para evitar publicar información sensible.
+$templateContent = [System.IO.File]::ReadAllText($templateHtmlPath, [System.Text.Encoding]::UTF8)
+[System.IO.File]::WriteAllText($reporteHtmlPath, $templateContent, [System.Text.UTF8Encoding]::new($false))
+
 $empresasToProcess = @()
 if ($Empresa -eq "Todas") {
     $empresasToProcess = @("Camanchaca", "Cermaq", "Mowi")
@@ -46,7 +58,11 @@ foreach ($currentEmpresa in $empresasToProcess) {
     $excelPath = $excelFiles[0].FullName
     Write-Host "Cargando datos desde: $($excelFiles[0].Name)"
 
-# Abrir Excel COM
+# Abrir Excel COM y garantizar su cierre incluso si ocurre un error.
+$excel = $null
+$wb = $null
+$targetSheet = $null
+try {
 $excel = New-Object -ComObject Excel.Application
 $excel.Visible = $false
 $excel.DisplayAlerts = $false
@@ -80,12 +96,21 @@ $totalCamaras = 0
 $totalSinVisual = 0
 $totalMortSinVisual = 0
 
-# Determinar número de semana automáticamente según nombre del archivo o pestaña
-$semanaNum = "34"
+# Determinar año y número de semana automáticamente según nombre del archivo o pestaña.
+$anioReporte = (Get-Date).Year.ToString()
+if ($excelFiles[0].Name -match "(?<!\d)(20\d{2})(?!\d)") {
+    $anioReporte = $Matches[1]
+} elseif ($fechaPestana -match "(?<!\d)(20\d{2})(?!\d)") {
+    $anioReporte = $Matches[1]
+}
+
+$semanaNum = ""
 if ($excelFiles[0].Name -match "(?i)semana\s*(\d+)") {
     $semanaNum = $Matches[1]
 } elseif ($fechaPestana -match "(?i)semana\s*(\d+)") {
     $semanaNum = $Matches[1]
+} else {
+    throw "No se pudo determinar la semana desde '$($excelFiles[0].Name)' ni desde la pestaña '$fechaPestana'."
 }
 
 # Detectar fila de encabezados
@@ -129,6 +154,14 @@ function Get-CellText($sheet, $r, $c) {
     }
 }
 
+function ConvertTo-JsString([AllowNull()][string]$Value) {
+    $json = ConvertTo-Json $Value -Compress
+    if ($null -eq $json) { return 'null' }
+
+    # Evita cerrar el elemento <script> o crear entidades HTML desde datos de Excel.
+    return $json.Replace('<', '\u003c').Replace('>', '\u003e').Replace('&', '\u0026')
+}
+
 # Leer filas
 $rowsCount = $targetSheet.UsedRange.Rows.Count
 $centrosList = @()
@@ -160,7 +193,7 @@ for ($r = ($headerRow + 1); $r -le $rowsCount; $r++) {
     [int]::TryParse($mortSinVisualStr, [ref]$mortSinVisual) | Out-Null
 
     $obs = Get-CellText $targetSheet $r $colObs
-    if ($obs -eq "") { $obs = "Sin novedad" }
+    if ($obs -eq "" -or $obs -eq "-") { $obs = "Sin novedad" }
 
     $centrosList += @{
         Centro = $centro
@@ -198,11 +231,11 @@ for ($r = ($headerRow + 1); $r -le $rowsCount; $r++) {
 # Construir filas de detalle de centros e observaciones
 $centrosDetailRowsHtml = ""
 foreach ($cItem in $centrosList) {
-    $cName = $cItem.Centro
-    $cReg = $cItem.Region
+    $cName = [System.Net.WebUtility]::HtmlEncode([string]$cItem.Centro)
+    $cReg = [System.Net.WebUtility]::HtmlEncode([string]$cItem.Region)
     $cJau = $cItem.Jaulas
     $cCam = $cItem.Camaras
-    $cObs = $cItem.Observaciones
+    $cObs = [System.Net.WebUtility]::HtmlEncode([string]$cItem.Observaciones)
 
     $badgeStyle = "background-color: #f1f5f9; color: #475569;"
     if ($cObs -like "*cosecha*" -or $cObs -like "*cosechado*") {
@@ -223,10 +256,21 @@ foreach ($cItem in $centrosList) {
       </tr>
 "@
 }
-
-$wb.Close($false)
-$excel.Quit()
-[System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
+} finally {
+    if ($null -ne $wb) {
+        try { $wb.Close($false) } catch { Write-Warning "No se pudo cerrar el libro de Excel: $_" }
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($wb) | Out-Null
+    }
+    if ($null -ne $targetSheet) {
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($targetSheet) | Out-Null
+    }
+    if ($null -ne $excel) {
+        try { $excel.Quit() } catch { Write-Warning "No se pudo cerrar Excel: $_" }
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
+    }
+    [GC]::Collect()
+    [GC]::WaitForPendingFinalizers()
+}
 
 # Calcular % Funcionamiento Global
 $funcGlobal = 100.00
@@ -282,7 +326,6 @@ if ($fechaPestana -match "(\d{1,2})[-/\.\s](\d{1,2})[-/\.\s](\d{2,4})") {
 # ==================================================
 # Sincronización Automática con reporte_semanal.html (Live Server)
 # ==================================================
-$reporteHtmlPath = Join-Path $workingDir "reporte_semanal.html"
 if (Test-Path $reporteHtmlPath) {
     try {
         $htmlContent = [System.IO.File]::ReadAllText($reporteHtmlPath, [System.Text.Encoding]::UTF8)
@@ -291,10 +334,10 @@ if (Test-Path $reporteHtmlPath) {
         # 1. Construir JS Array de Centros
         $jsCentrosItems = @()
         foreach ($cItem in $centrosList) {
-            $cNameEsc = $cItem.Centro.Replace("'", "\'")
-            $cRegEsc = $cItem.Region.Replace("'", "\'")
-            $cObsEsc = $cItem.Observaciones.Replace("'", "\'")
-            $jsCentrosItems += "      { centro: '$cNameEsc', reg: '$cRegEsc', jaulas: $($cItem.Jaulas), camaras: $($cItem.Camaras), obs: '$cObsEsc' }"
+            $cNameJs = ConvertTo-JsString ([string]$cItem.Centro)
+            $cRegJs = ConvertTo-JsString ([string]$cItem.Region)
+            $cObsJs = ConvertTo-JsString ([string]$cItem.Observaciones)
+            $jsCentrosItems += "      { centro: $cNameJs, reg: $cRegJs, jaulas: $($cItem.Jaulas), camaras: $($cItem.Camaras), obs: $cObsJs }"
         }
         $jsDataArrayStr = "const data$currentEmpresa = [$nl" + ($jsCentrosItems -join ",$nl") + "$nl    ];"
         $patternArray = "(?s)const data$currentEmpresa = \[.*?\];"
@@ -309,26 +352,29 @@ if (Test-Path $reporteHtmlPath) {
                 $rFunc = [Math]::Round(((($rData.Camaras - $rData.SinVisual - $rData.MortSinVisual) / $rData.Camaras) * 100), 2)
             }
             $rFuncStr = "{0:N2}%" -f $rFunc
-            $regionalJsItems += "          { reg: '$rKey', centros: $($rData.Centros), jaulas: $($rData.Jaulas), camaras: $($rData.Camaras), fallas: $($rData.SinVisual), mortFallas: $($rData.MortSinVisual), func: '$rFuncStr' }"
+            $rKeyJs = ConvertTo-JsString ([string]$rKey)
+            $rFuncJs = ConvertTo-JsString $rFuncStr
+            $regionalJsItems += "          { reg: $rKeyJs, centros: $($rData.Centros), jaulas: $($rData.Jaulas), camaras: $($rData.Camaras), fallas: $($rData.SinVisual), mortFallas: $($rData.MortSinVisual), func: $rFuncJs }"
         }
         $regionalJsStr = "[$nl" + ($regionalJsItems -join ",$nl") + "$nl        ]"
 
         $totalOperativas = $totalCamaras - $totalSinVisual - $totalMortSinVisual
+        $fechaActualizadoJs = ConvertTo-JsString "Actualizado: $fechaActualizado"
 
         # 3. Actualizar bloque switchCompany en JS
         if ($currentEmpresa -eq "Cermaq") {
             $switchBlock = @"
       } else if (company === 'cermaq') {
-        document.title = 'Reporte Cermaq 2026 Semana $semanaNum';
+        document.title = 'Reporte Cermaq $anioReporte Semana $semanaNum';
         if (header1) header1.classList.add('cermaq');
         if (header2) header2.classList.add('cermaq');
         if (logoCer1) logoCer1.style.display = 'block';
         if (logoCer2) logoCer2.style.display = 'block';
         if (title1) title1.innerHTML = 'REPORTE SEMANAL';
         if (title2) title2.innerHTML = 'DETALLE OPERATIVO & INSIGHTS';
-        if (footer1) footer1.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2';
-        if (footer2) footer2.innerHTML = 'Reporte CERMAQ 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2';
-        if (dateText) dateText.innerHTML = 'Actualizado: $fechaActualizado';
+        if (footer1) footer1.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte CERMAQ $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2</span>';
+        if (footer2) footer2.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte CERMAQ $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2</span>';
+        if (dateText) dateText.textContent = $fechaActualizadoJs;
         
         if (tableHeaderReg) {
           tableHeaderReg.innerHTML = ``
@@ -343,7 +389,7 @@ if (Test-Path $reporteHtmlPath) {
             </tr>``;
         }
 
-        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, true);
+        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, data$currentEmpresa);
 
         document.getElementById('donutPercent').innerText = '$funcGlobalStr';
         document.getElementById('donutOpText').innerText = 'Operativas ($totalOperativas)';
@@ -357,14 +403,14 @@ if (Test-Path $reporteHtmlPath) {
         } elseif ($currentEmpresa -eq "Camanchaca") {
             $switchBlock = @"
       if (company === 'camanchaca') {
-        document.title = 'Reporte Camanchaca 2026 Semana $semanaNum';
+        document.title = 'Reporte Camanchaca $anioReporte Semana $semanaNum';
         if (logoCam1) logoCam1.style.display = 'block';
         if (logoCam2) logoCam2.style.display = 'block';
         if (title1) title1.innerHTML = 'REPORTE SEMANAL';
         if (title2) title2.innerHTML = 'DETALLE OPERATIVO & INSIGHTS';
-        if (footer1) footer1.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2';
-        if (footer2) footer2.innerHTML = 'Reporte CAMANCHACA 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2';
-        if (dateText) dateText.innerHTML = 'Actualizado: $fechaActualizado';
+        if (footer1) footer1.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte CAMANCHACA $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2</span>';
+        if (footer2) footer2.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte CAMANCHACA $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2</span>';
+        if (dateText) dateText.textContent = $fechaActualizadoJs;
         
         if (tableHeaderReg) {
           tableHeaderReg.innerHTML = ``
@@ -379,7 +425,7 @@ if (Test-Path $reporteHtmlPath) {
             </tr>``;
         }
 
-        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, true);
+        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, data$currentEmpresa);
 
         document.getElementById('donutPercent').innerText = '$funcGlobalStr';
         document.getElementById('donutOpText').innerText = 'Operativas ($totalOperativas)';
@@ -393,16 +439,16 @@ if (Test-Path $reporteHtmlPath) {
         } elseif ($currentEmpresa -eq "Mowi") {
             $switchBlock = @"
       } else if (company === 'mowi') {
-        document.title = 'Reporte Mowi 2026 Semana $semanaNum';
+        document.title = 'Reporte Mowi $anioReporte Semana $semanaNum';
         if (header1) header1.classList.add('mowi');
         if (header2) header2.classList.add('mowi');
         if (logoMow1) logoMow1.style.display = 'block';
         if (logoMow2) logoMow2.style.display = 'block';
         if (title1) title1.innerHTML = 'REPORTE SEMANAL';
         if (title2) title2.innerHTML = 'DETALLE OPERATIVO & INSIGHTS';
-        if (footer1) footer1.innerHTML = 'Reporte MOWI 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2';
-        if (footer2) footer2.innerHTML = 'Reporte MOWI 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2';
-        if (dateText) dateText.innerHTML = 'Actualizado: $fechaActualizado';
+        if (footer1) footer1.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte MOWI $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2</span>';
+        if (footer2) footer2.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte MOWI $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2</span>';
+        if (dateText) dateText.textContent = $fechaActualizadoJs;
         
         if (tableHeaderReg) {
           tableHeaderReg.innerHTML = ``
@@ -417,7 +463,7 @@ if (Test-Path $reporteHtmlPath) {
             </tr>``;
         }
 
-        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, true);
+        updateMetrics($totalCentros, $totalJaulas, $totalCamaras, '$funcGlobalStr', $regionalJsStr, data$currentEmpresa);
 
         document.getElementById('donutPercent').innerText = '$funcGlobalStr';
         document.getElementById('donutOpText').innerText = 'Operativas ($totalOperativas)';
@@ -430,7 +476,7 @@ if (Test-Path $reporteHtmlPath) {
             $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $switchBlock })
         }
 
-        [System.IO.File]::WriteAllText($reporteHtmlPath, $htmlContent, [System.Text.Encoding]::UTF8)
+        [System.IO.File]::WriteAllText($reporteHtmlPath, $htmlContent, [System.Text.UTF8Encoding]::new($false))
         Write-Host "Vista previa HTML (reporte_semanal.html) actualizada automáticamente para $currentEmpresa."
     } catch {
         Write-Host "Aviso: No se pudo actualizar reporte_semanal.html: $_"
@@ -446,10 +492,11 @@ foreach ($rKey in $regiones.Keys | Sort-Object) {
         $rFunc = [Math]::Round(((($rData.Camaras - $rData.SinVisual - $rData.MortSinVisual) / $rData.Camaras) * 100), 2)
     }
     $rFuncStr = "{0:N2}%" -f $rFunc
+    $rKeyHtml = [System.Net.WebUtility]::HtmlEncode([string]$rKey)
 
     $tableRowsHtml += @"
       <tr>
-        <td><strong>$rKey</strong></td>
+        <td><strong>$rKeyHtml</strong></td>
         <td>$($rData.Centros)</td>
         <td>$($rData.Jaulas)</td>
         <td>$($rData.Camaras)</td>
@@ -476,6 +523,15 @@ $tableHeaderHtml = @"
 # --- GENERADOR DINÁMICO DE GRÁFICOS SVG ---
 $totalFalladas = $totalSinVisual + $totalMortSinVisual
 $totalOperativas = [Math]::Max(0, ($totalCamaras - $totalFalladas))
+$healthCoverageText = "$totalCentros centros / $totalJaulas jaulas"
+$healthIncidentsText = if ($totalFalladas -eq 0) { "Sin cámaras con falla" } else { "$totalFalladas cámara(s) sin visual" }
+$healthOverallText = if ($funcGlobal -ge 95) {
+    "Disponibilidad alta"
+} elseif ($funcGlobal -ge 85) {
+    "Disponibilidad media"
+} else {
+    "Disponibilidad crítica"
+}
 $regionKeys = @($regiones.Keys | Sort-Object)
 $numRegiones = $regionKeys.Count
 if ($numRegiones -eq 0) { $numRegiones = 1 }
@@ -573,7 +629,7 @@ $barsFuncSvg
       </svg>
 "@
 
-# 3. Gráfico: Estado del Parque de Cámaras (Donut)
+# 3. Gráfico: Estado de Cámaras Submarinas (Donut)
 $pctOp = 1.0
 if ($totalCamaras -gt 0) {
     $pctOp = $totalOperativas / $totalCamaras
@@ -664,12 +720,13 @@ $barsJCSvg
 "@
 
 # Construir HTML Completo
+$fechaActualizadoHtml = [System.Net.WebUtility]::HtmlEncode([string]$fechaActualizado)
 $htmlTemplate = @"
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Reporte $($currentEmpresa) 2026 Semana $($semanaNum)</title>
+<title>Reporte $($currentEmpresa) $anioReporte Semana $($semanaNum)</title>
 <style>
   @page {
     size: A4 portrait;
@@ -879,7 +936,7 @@ $htmlTemplate = @"
     <div class="header-titles">
       <div class="header-main-title">REPORTE SEMANAL</div>
       <div class="header-subtitle">
-        <span>Actualizado: $fechaActualizado</span>
+        <span>Actualizado: $fechaActualizadoHtml</span>
         <span class="badge-pill">Confidencial</span>
       </div>
     </div>
@@ -940,7 +997,7 @@ $htmlTemplate = @"
     </div>
 
     <div class="chart-box">
-      <div class="chart-title">Estado del Parque de C&aacute;maras</div>
+      <div class="chart-title">Estado de C&aacute;maras (Submarinas, Cono y PTZ)</div>
       $svgChartDonut
     </div>
 
@@ -956,8 +1013,8 @@ $htmlTemplate = @"
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1.7 15.9 1.7 10.8 4.9 7.6"/><path d="M7.8 16.2c-1.6-1.6-1.6-4.1 0-5.7"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c1.6 1.6 1.6 4.1 0 5.7"/><path d="M19.1 4.9c3.2 3.2 3.2 8.3 0 11.5"/></svg>
       </div>
       <div>
-        <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Conectividad Remota</div>
-        <div style="font-size: 12px; font-weight: 700; color: #0f2744;">Enlaces Activos (100%)</div>
+        <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Cobertura monitoreada</div>
+        <div style="font-size: 12px; font-weight: 700; color: #0f2744;">$healthCoverageText</div>
       </div>
     </div>
     <div style="flex: 1; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 10px;">
@@ -965,8 +1022,8 @@ $htmlTemplate = @"
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
       </div>
       <div>
-        <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">C&aacute;maras de Respaldo</div>
-        <div style="font-size: 12px; font-weight: 700; color: #0f2744;">Sistemas Habilitados</div>
+        <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Incidencias registradas</div>
+        <div style="font-size: 12px; font-weight: 700; color: #0f2744;">$healthIncidentsText</div>
       </div>
     </div>
     <div style="flex: 1; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 10px;">
@@ -975,13 +1032,13 @@ $htmlTemplate = @"
       </div>
       <div>
         <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Salud General</div>
-        <div style="font-size: 12px; font-weight: 700; color: #0f2744;">Disponibilidad Alta</div>
+        <div style="font-size: 12px; font-weight: 700; color: #0f2744;">$healthOverallText</div>
       </div>
     </div>
   </div>
 
   <div class="footer">
-    Reporte $($currentEmpresa.ToUpper()) 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2
+    Reporte $($currentEmpresa.ToUpper()) $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2
   </div>
 
   <!-- SALTO DE PÁGINA PARA PAGINA 2 (DETALLE DE CENTROS E INSIGHTS) -->
@@ -1015,7 +1072,7 @@ $htmlTemplate = @"
   </table>
 
   <div class="footer">
-    Reporte $($currentEmpresa.ToUpper()) 2026 &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2
+    Reporte $($currentEmpresa.ToUpper()) $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2
   </div>
 
 </body>
@@ -1028,16 +1085,36 @@ if ($GenerarPDF) {
     if (-not (Test-Path $outputDir)) {
         New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
     }
-    $outputPdf = "$outputDir\Reporte $currentEmpresa 2026 Semana $semanaNum.pdf"
+    $outputPdf = "$outputDir\Reporte $currentEmpresa $anioReporte Semana $semanaNum.pdf"
 
-    [System.IO.File]::WriteAllText($tmpHtml, $htmlTemplate, [System.Text.Encoding]::UTF8)
+    $edgeCandidates = @(
+        (Join-Path ${env:ProgramFiles(x86)} "Microsoft\Edge\Application\msedge.exe"),
+        (Join-Path $env:ProgramFiles "Microsoft\Edge\Application\msedge.exe")
+    )
+    $edgeFromPath = Get-Command msedge.exe -ErrorAction SilentlyContinue
+    if ($edgeFromPath) { $edgeCandidates += $edgeFromPath.Source }
+    $edgePath = $edgeCandidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
+    if (-not $edgePath) {
+        throw "No se encontró Microsoft Edge. Instálalo o agrega msedge.exe al PATH para generar PDF."
+    }
 
-    # Convertir HTML a PDF usando Edge Headless (Blink PDF Engine)
-    $edgeCmd = "`"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`" --headless=new --no-sandbox --disable-gpu --no-pdf-header-footer --print-to-pdf=`"$outputPdf`" `"file:///$($tmpHtml.Replace('\', '/'))`""
-    cmd /c $edgeCmd
-
-    # Limpiar temporal
-    if (Test-Path $tmpHtml) { Remove-Item $tmpHtml -Force }
+    try {
+        [System.IO.File]::WriteAllText($tmpHtml, $htmlTemplate, [System.Text.UTF8Encoding]::new($false))
+        $tmpUri = ([System.Uri]$tmpHtml).AbsoluteUri
+        $edgeArgs = @(
+            "--headless=new",
+            "--disable-gpu",
+            "--no-pdf-header-footer",
+            "--print-to-pdf=$outputPdf",
+            $tmpUri
+        )
+        & $edgePath @edgeArgs
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $outputPdf)) {
+            throw "Edge no pudo generar el PDF (código de salida: $LASTEXITCODE)."
+        }
+    } finally {
+        if (Test-Path -LiteralPath $tmpHtml) { Remove-Item -LiteralPath $tmpHtml -Force }
+    }
 
     Write-Host "=================================================="
     Write-Host "REPORTE PDF GENERADO EXITOSAMENTE:"
