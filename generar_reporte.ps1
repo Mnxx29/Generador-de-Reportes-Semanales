@@ -1105,12 +1105,12 @@ if ($GenerarPDF) {
             "--headless=new",
             "--disable-gpu",
             "--no-pdf-header-footer",
-            "--print-to-pdf=$outputPdf",
-            $tmpUri
+            "`"--print-to-pdf=$outputPdf`"",
+            "`"$tmpUri`""
         )
-        & $edgePath @edgeArgs
-        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $outputPdf)) {
-            throw "Edge no pudo generar el PDF (código de salida: $LASTEXITCODE)."
+        $edgeProcess = Start-Process -FilePath $edgePath -ArgumentList $edgeArgs -Wait -PassThru -NoNewWindow
+        if ($edgeProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $outputPdf)) {
+            throw "Edge no pudo generar el PDF (código de salida: $($edgeProcess.ExitCode))."
         }
     } finally {
         if (Test-Path -LiteralPath $tmpHtml) { Remove-Item -LiteralPath $tmpHtml -Force }
