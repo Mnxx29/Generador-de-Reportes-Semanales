@@ -1,11 +1,13 @@
 <#
 .SYNOPSIS
-    Generador Automatizado de Reportes Semanales en PDF (Camanchaca, Cermaq, Mowi)
+    Generador Automatizado de Reportes Semanales en PDF y Dashboard Web (Camanchaca, Cermaq, Mowi)
 .DESCRIPTION
     Lee el archivo Excel más reciente de la empresa especificada, toma la última pestaña actualizada,
-    calcula las métricas de rendimiento por región y genera el informe PDF ejecutivo con gráficos vectoriales.
+    calcula las métricas de rendimiento por región y genera el informe PDF ejecutivo con gráficos vectoriales
+    y actualiza la vista previa interactiva HTML.
 .EXAMPLE
     .\generar_reporte.ps1 -Empresa Camanchaca
+    .\generar_reporte.ps1 -GenerarPDF
 #>
 
 param (
@@ -30,115 +32,18 @@ if (-not (Test-Path -LiteralPath $templateHtmlPath)) {
     throw "No se encontró la plantilla requerida: $templateHtmlPath"
 }
 
-# Cada ejecución comienza desde una plantilla sin datos operativos. El archivo
-# generado queda fuera de Git para evitar publicar información sensible.
-$templateContent = [System.IO.File]::ReadAllText($templateHtmlPath, [System.Text.Encoding]::UTF8)
-[System.IO.File]::WriteAllText($reporteHtmlPath, $templateContent, [System.Text.UTF8Encoding]::new($false))
+# Si se procesan todas las empresas o aún no existe el archivo generado,
+# se inicializa desde la plantilla limpia para asegurar consistencia y proteger datos en Git.
+if ($Empresa -eq "Todas" -or -not (Test-Path -LiteralPath $reporteHtmlPath)) {
+    $templateContent = [System.IO.File]::ReadAllText($templateHtmlPath, [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($reporteHtmlPath, $templateContent, [System.Text.UTF8Encoding]::new($false))
+}
 
 $empresasToProcess = @()
 if ($Empresa -eq "Todas") {
     $empresasToProcess = @("Camanchaca", "Cermaq", "Mowi")
 } else {
     $empresasToProcess = @($Empresa)
-}
-
-foreach ($currentEmpresa in $empresasToProcess) {
-    Write-Host "=================================================="
-    Write-Host "PROCESANDO EMPRESA: $currentEmpresa"
-    Write-Host "=================================================="
-
-    # Encontrar archivo Excel correspondiente (Selecciona el más reciente automáticamente)
-    $excelDir = Join-Path $workingDir "Datos_Excel"
-    if (-not (Test-Path $excelDir)) { $excelDir = $workingDir }
-    $excelFiles = Get-ChildItem -Path $excelDir -Filter "*$currentEmpresa*.xlsx" | Sort-Object LastWriteTime -Descending
-    if ($excelFiles.Count -eq 0) {
-        Write-Warning "No se encontró archivo Excel para $currentEmpresa en $excelDir"
-        continue
-    }
-    $excelPath = $excelFiles[0].FullName
-    Write-Host "Cargando datos desde: $($excelFiles[0].Name)"
-
-# Abrir Excel COM y garantizar su cierre incluso si ocurre un error.
-$excel = $null
-$wb = $null
-$targetSheet = $null
-try {
-$excel = New-Object -ComObject Excel.Application
-$excel.Visible = $false
-$excel.DisplayAlerts = $false
-
-$wb = $excel.Workbooks.Open($excelPath)
-
-# Obtener primera pestaña con datos semanales (las pestañas están ordenadas de más reciente a más antigua de izquierda a derecha)
-$targetSheet = $null
-for ($i = 1; $i -le $wb.Worksheets.Count; $i++) {
-    $s = $wb.Worksheets.Item($i)
-    if ($s.Name -ne "Consolidado") {
-        $targetSheet = $s
-        break
-    }
-}
-
-if (-not $targetSheet) {
-    $wb.Close($false)
-    $excel.Quit()
-    Write-Error "No se encontró una pestaña válida en el archivo Excel."
-}
-
-$fechaPestana = $targetSheet.Name.Trim()
-Write-Host "Pestaña seleccionada (semana en curso): $fechaPestana"
-
-# Mapear datos por regiones
-$regiones = [ordered]@{}
-$totalCentros = 0
-$totalJaulas = 0
-$totalCamaras = 0
-$totalSinVisual = 0
-$totalMortSinVisual = 0
-
-# Determinar año y número de semana automáticamente según nombre del archivo o pestaña.
-$anioReporte = (Get-Date).Year.ToString()
-if ($excelFiles[0].Name -match "(?<!\d)(20\d{2})(?!\d)") {
-    $anioReporte = $Matches[1]
-} elseif ($fechaPestana -match "(?<!\d)(20\d{2})(?!\d)") {
-    $anioReporte = $Matches[1]
-}
-
-$semanaNum = ""
-if ($excelFiles[0].Name -match "(?i)semana\s*(\d+)") {
-    $semanaNum = $Matches[1]
-} elseif ($fechaPestana -match "(?i)semana\s*(\d+)") {
-    $semanaNum = $Matches[1]
-} else {
-    throw "No se pudo determinar la semana desde '$($excelFiles[0].Name)' ni desde la pestaña '$fechaPestana'."
-}
-
-# Detectar fila de encabezados
-$headerRow = 0
-for ($r = 1; $r -le [Math]::Min(10, $targetSheet.UsedRange.Rows.Count); $r++) {
-    $c1 = $targetSheet.Cells.Item($r, 1).Text.Trim()
-    if ($c1 -like "*Centro*") { $headerRow = $r; break }
-}
-if ($headerRow -eq 0) { $headerRow = 2 }
-
-# Mapear columnas dinámicamente según encabezados
-$colCentro = 1
-$colRegion = 2
-$colJaulas = 6
-$colCamsPorJaula = 7
-$colSinVisual = 8
-$colMortSinVisual = 9
-
-$colCount = $targetSheet.UsedRange.Columns.Count
-for ($c = 1; $c -le $colCount; $c++) {
-    $hText = $targetSheet.Cells.Item($headerRow, $c).Text.Trim()
-    if ($hText -like "*Observaci*") { $colObs = $c }
-    elseif ($hText -like "*mortalidad*sin visual*") { $colMortSinVisual = $c }
-    elseif ($hText -like "*sin visual*") { $colSinVisual = $c }
-    elseif ($hText -like "*C*mara*jaula*") { $colCamsPorJaula = $c }
-    elseif ($hText -like "*Total*jaula*" -or $hText -like "*Total de jaulas*") { $colJaulas = $c }
-    elseif ($hText -like "*Regi*") { $colRegion = $c }
-    elseif ($hText -like "*Centro*") { $colCentro = $c }
 }
 
 function Get-CellText($sheet, $r, $c) {
@@ -158,95 +63,192 @@ function ConvertTo-JsString([AllowNull()][string]$Value) {
     $json = ConvertTo-Json $Value -Compress
     if ($null -eq $json) { return 'null' }
 
-    # Evita cerrar el elemento <script> o crear entidades HTML desde datos de Excel.
+    # Evita cerrar el elemento <script> o crear entidades HTML conflictivas desde datos de Excel
     return $json.Replace('<', '\u003c').Replace('>', '\u003e').Replace('&', '\u0026')
 }
 
-# Leer filas
-$rowsCount = $targetSheet.UsedRange.Rows.Count
-$centrosList = @()
+foreach ($currentEmpresa in $empresasToProcess) {
+    Write-Host "=================================================="
+    Write-Host "PROCESANDO EMPRESA: $currentEmpresa"
+    Write-Host "=================================================="
 
-for ($r = ($headerRow + 1); $r -le $rowsCount; $r++) {
-    $centro = Get-CellText $targetSheet $r $colCentro
-    if ($centro -eq "" -or $centro -eq "-" -or $centro -eq "Centro" -or $centro -like "*Feed Center*") { continue }
-    
-    $reg = Get-CellText $targetSheet $r $colRegion
-    if ($reg -eq "" -or $reg -eq "-") { continue }
-
-    $jaulasStr = Get-CellText $targetSheet $r $colJaulas
-    $jaulas = 0
-    [int]::TryParse($jaulasStr, [ref]$jaulas) | Out-Null
-
-    $camsPorJaulaStr = Get-CellText $targetSheet $r $colCamsPorJaula
-    $camsPorJaula = 1
-    if ($camsPorJaulaStr -ne "") { [int]::TryParse($camsPorJaulaStr, [ref]$camsPorJaula) | Out-Null }
-    if ($camsPorJaula -le 0) { $camsPorJaula = 1 }
-
-    $camaras = $jaulas * $camsPorJaula
-
-    $sinVisualStr = Get-CellText $targetSheet $r $colSinVisual
-    $sinVisual = 0
-    [int]::TryParse($sinVisualStr, [ref]$sinVisual) | Out-Null
-
-    $mortSinVisualStr = Get-CellText $targetSheet $r $colMortSinVisual
-    $mortSinVisual = 0
-    [int]::TryParse($mortSinVisualStr, [ref]$mortSinVisual) | Out-Null
-
-    $obs = Get-CellText $targetSheet $r $colObs
-    if ($obs -eq "" -or $obs -eq "-") { $obs = "Sin novedad" }
-
-    $centrosList += @{
-        Centro = $centro
-        Region = $reg
-        Jaulas = $jaulas
-        Camaras = $camaras
-        SinVisual = $sinVisual
-        MortSinVisual = $mortSinVisual
-        Observaciones = $obs
+    # Encontrar archivo Excel correspondiente (Selecciona el más reciente automáticamente)
+    $excelDir = Join-Path $workingDir "Datos_Excel"
+    if (-not (Test-Path $excelDir)) { $excelDir = $workingDir }
+    $excelFiles = Get-ChildItem -Path $excelDir -Filter "*$currentEmpresa*.xlsx" | Sort-Object LastWriteTime -Descending
+    if ($excelFiles.Count -eq 0) {
+        Write-Warning "No se encontró archivo Excel para $currentEmpresa en $excelDir"
+        continue
     }
+    $excelPath = $excelFiles[0].FullName
+    Write-Host "Cargando datos desde: $($excelFiles[0].Name)"
 
-    if (-not $regiones.Contains($reg)) {
-        $regiones[$reg] = @{
-            Centros = 0
-            Jaulas = 0
-            Camaras = 0
-            SinVisual = 0
-            MortSinVisual = 0
+    # Abrir Excel COM y garantizar su cierre incluso si ocurre un error
+    $excel = $null
+    $wb = $null
+    $targetSheet = $null
+    try {
+        $excel = New-Object -ComObject Excel.Application
+        $excel.Visible = $false
+        $excel.DisplayAlerts = $false
+
+        $wb = $excel.Workbooks.Open($excelPath)
+
+        # Obtener primera pestaña con datos semanales (las pestañas están ordenadas de más reciente a más antigua)
+        for ($i = 1; $i -le $wb.Worksheets.Count; $i++) {
+            $s = $wb.Worksheets.Item($i)
+            if ($s.Name -ne "Consolidado") {
+                $targetSheet = $s
+                break
+            }
         }
-    }
 
-    $regiones[$reg].Centros += 1
-    $regiones[$reg].Jaulas += $jaulas
-    $regiones[$reg].Camaras += $camaras
-    $regiones[$reg].SinVisual += $sinVisual
-    $regiones[$reg].MortSinVisual += $mortSinVisual
+        if (-not $targetSheet) {
+            throw "No se encontró una pestaña válida en el archivo Excel: $($excelFiles[0].Name)"
+        }
 
-    $totalCentros++
-    $totalJaulas += $jaulas
-    $totalCamaras += $camaras
-    $totalSinVisual += $sinVisual
-    $totalMortSinVisual += $mortSinVisual
-}
+        $fechaPestana = $targetSheet.Name.Trim()
+        Write-Host "Pestaña seleccionada (semana en curso): $fechaPestana"
 
-# Construir filas de detalle de centros e observaciones
-$centrosDetailRowsHtml = ""
-foreach ($cItem in $centrosList) {
-    $cName = [System.Net.WebUtility]::HtmlEncode([string]$cItem.Centro)
-    $cReg = [System.Net.WebUtility]::HtmlEncode([string]$cItem.Region)
-    $cJau = $cItem.Jaulas
-    $cCam = $cItem.Camaras
-    $cObs = [System.Net.WebUtility]::HtmlEncode([string]$cItem.Observaciones)
+        # Determinar año y número de semana automáticamente según nombre del archivo o pestaña
+        $anioReporte = (Get-Date).Year.ToString()
+        if ($excelFiles[0].Name -match "(?<!\d)(20\d{2})(?!\d)") {
+            $anioReporte = $Matches[1]
+        } elseif ($fechaPestana -match "(?<!\d)(20\d{2})(?!\d)") {
+            $anioReporte = $Matches[1]
+        }
 
-    $badgeStyle = "background-color: #f1f5f9; color: #475569;"
-    if ($cObs -like "*cosecha*" -or $cObs -like "*cosechado*") {
-        $badgeStyle = "background-color: #fef3c7; color: #92400e; font-weight: bold;"
-    } elseif ($cObs -like "*falla*" -or $cObs -like "*intermitencia*" -or $cObs -like "*no responde*" -or $cObs -like "*problema*" -or $cObs -like "*sin visual*") {
-        $badgeStyle = "background-color: #fee2e2; color: #991b1b; font-weight: bold;"
-    } elseif ($cObs -like "*sin novedad*" -or $cObs -like "*100%*") {
-        $badgeStyle = "background-color: #f0fdf4; color: #166534;"
-    }
+        $semanaNum = ""
+        if ($excelFiles[0].Name -match "(?i)semana\s*(\d+)") {
+            $semanaNum = $Matches[1]
+        } elseif ($fechaPestana -match "(?i)semana\s*(\d+)") {
+            $semanaNum = $Matches[1]
+        } else {
+            throw "No se pudo determinar la semana desde '$($excelFiles[0].Name)' ni desde la pestaña '$fechaPestana'."
+        }
 
-    $centrosDetailRowsHtml += @"
+        # Mapear datos por regiones
+        $regiones = [ordered]@{}
+        $totalCentros = 0
+        $totalJaulas = 0
+        $totalCamaras = 0
+        $totalSinVisual = 0
+        $totalMortSinVisual = 0
+
+        # Detectar fila de encabezados
+        $headerRow = 0
+        for ($r = 1; $r -le [Math]::Min(10, $targetSheet.UsedRange.Rows.Count); $r++) {
+            $c1 = $targetSheet.Cells.Item($r, 1).Text.Trim()
+            if ($c1 -like "*Centro*") { $headerRow = $r; break }
+        }
+        if ($headerRow -eq 0) { $headerRow = 2 }
+
+        # Mapear columnas dinámicamente según encabezados
+        $colCentro = 1
+        $colRegion = 2
+        $colJaulas = 6
+        $colCamsPorJaula = 7
+        $colSinVisual = 8
+        $colMortSinVisual = 9
+        $colObs = 10
+
+        $colCount = $targetSheet.UsedRange.Columns.Count
+        for ($c = 1; $c -le $colCount; $c++) {
+            $hText = $targetSheet.Cells.Item($headerRow, $c).Text.Trim()
+            if ($hText -like "*Observaci*") { $colObs = $c }
+            elseif ($hText -like "*mortalidad*sin visual*") { $colMortSinVisual = $c }
+            elseif ($hText -like "*sin visual*") { $colSinVisual = $c }
+            elseif ($hText -like "*C*mara*jaula*") { $colCamsPorJaula = $c }
+            elseif ($hText -like "*Total*jaula*" -or $hText -like "*Total de jaulas*") { $colJaulas = $c }
+            elseif ($hText -like "*Regi*") { $colRegion = $c }
+            elseif ($hText -like "*Centro*") { $colCentro = $c }
+        }
+
+        # Leer filas
+        $rowsCount = $targetSheet.UsedRange.Rows.Count
+        $centrosList = @()
+
+        for ($r = ($headerRow + 1); $r -le $rowsCount; $r++) {
+            $centro = Get-CellText $targetSheet $r $colCentro
+            if ($centro -eq "" -or $centro -eq "-" -or $centro -eq "Centro" -or $centro -like "*Feed Center*") { continue }
+            
+            $reg = Get-CellText $targetSheet $r $colRegion
+            if ($reg -eq "" -or $reg -eq "-") { continue }
+
+            $jaulasStr = Get-CellText $targetSheet $r $colJaulas
+            $jaulas = 0
+            [int]::TryParse($jaulasStr, [ref]$jaulas) | Out-Null
+
+            $camsPorJaulaStr = Get-CellText $targetSheet $r $colCamsPorJaula
+            $camsPorJaula = 1
+            if ($camsPorJaulaStr -ne "") { [int]::TryParse($camsPorJaulaStr, [ref]$camsPorJaula) | Out-Null }
+            if ($camsPorJaula -le 0) { $camsPorJaula = 1 }
+
+            $camaras = $jaulas * $camsPorJaula
+
+            $sinVisualStr = Get-CellText $targetSheet $r $colSinVisual
+            $sinVisual = 0
+            [int]::TryParse($sinVisualStr, [ref]$sinVisual) | Out-Null
+
+            $mortSinVisualStr = Get-CellText $targetSheet $r $colMortSinVisual
+            $mortSinVisual = 0
+            [int]::TryParse($mortSinVisualStr, [ref]$mortSinVisual) | Out-Null
+
+            $obs = Get-CellText $targetSheet $r $colObs
+            if ($obs -eq "" -or $obs -eq "-") { $obs = "Sin novedad" }
+
+            $centrosList += @{
+                Centro = $centro
+                Region = $reg
+                Jaulas = $jaulas
+                Camaras = $camaras
+                SinVisual = $sinVisual
+                MortSinVisual = $mortSinVisual
+                Observaciones = $obs
+            }
+
+            if (-not $regiones.Contains($reg)) {
+                $regiones[$reg] = @{
+                    Centros = 0
+                    Jaulas = 0
+                    Camaras = 0
+                    SinVisual = 0
+                    MortSinVisual = 0
+                }
+            }
+
+            $regiones[$reg].Centros += 1
+            $regiones[$reg].Jaulas += $jaulas
+            $regiones[$reg].Camaras += $camaras
+            $regiones[$reg].SinVisual += $sinVisual
+            $regiones[$reg].MortSinVisual += $mortSinVisual
+
+            $totalCentros++
+            $totalJaulas += $jaulas
+            $totalCamaras += $camaras
+            $totalSinVisual += $sinVisual
+            $totalMortSinVisual += $mortSinVisual
+        }
+
+        # Construir filas de detalle de centros e observaciones (HTML Escaped)
+        $centrosDetailRowsHtml = ""
+        foreach ($cItem in $centrosList) {
+            $cName = [System.Net.WebUtility]::HtmlEncode([string]$cItem.Centro)
+            $cReg = [System.Net.WebUtility]::HtmlEncode([string]$cItem.Region)
+            $cJau = $cItem.Jaulas
+            $cCam = $cItem.Camaras
+            $cObs = [System.Net.WebUtility]::HtmlEncode([string]$cItem.Observaciones)
+
+            $badgeStyle = "background-color: #f1f5f9; color: #475569;"
+            if ($cObs -like "*cosecha*" -or $cObs -like "*cosechado*") {
+                $badgeStyle = "background-color: #fef3c7; color: #92400e; font-weight: bold;"
+            } elseif ($cObs -like "*falla*" -or $cObs -like "*intermitencia*" -or $cObs -like "*no responde*" -or $cObs -like "*problema*" -or $cObs -like "*sin visual*") {
+                $badgeStyle = "background-color: #fee2e2; color: #991b1b; font-weight: bold;"
+            } elseif ($cObs -like "*sin novedad*" -or $cObs -like "*100%*") {
+                $badgeStyle = "background-color: #f0fdf4; color: #166534;"
+            }
+
+            $centrosDetailRowsHtml += @"
       <tr>
         <td style="text-align: left; font-weight: 700;">$cName</td>
         <td>$cReg</td>
@@ -255,115 +257,124 @@ foreach ($cItem in $centrosList) {
         <td style="text-align: left;"><span style="display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; line-height: 1.25; white-space: normal; word-wrap: break-word; max-width: 100%; $badgeStyle">$cObs</span></td>
       </tr>
 "@
-}
-} finally {
-    if ($null -ne $wb) {
-        try { $wb.Close($false) } catch { Write-Warning "No se pudo cerrar el libro de Excel: $_" }
-        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($wb) | Out-Null
+        }
+    } finally {
+        if ($null -ne $wb) {
+            try { $wb.Close($false) } catch { Write-Warning "No se pudo cerrar el libro de Excel: $_" }
+            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($wb) | Out-Null
+        }
+        if ($null -ne $targetSheet) {
+            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($targetSheet) | Out-Null
+        }
+        if ($null -ne $excel) {
+            try { $excel.Quit() } catch { Write-Warning "No se pudo cerrar Excel: $_" }
+            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
+        }
+        [GC]::Collect()
+        [GC]::WaitForPendingFinalizers()
     }
-    if ($null -ne $targetSheet) {
-        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($targetSheet) | Out-Null
+
+    # Calcular % Funcionamiento Global
+    $funcGlobal = 100.00
+    if ($totalCamaras -gt 0) {
+        $funcGlobal = [Math]::Round(((($totalCamaras - $totalSinVisual - $totalMortSinVisual) / $totalCamaras) * 100), 2)
     }
-    if ($null -ne $excel) {
-        try { $excel.Quit() } catch { Write-Warning "No se pudo cerrar Excel: $_" }
-        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
-    }
-    [GC]::Collect()
-    [GC]::WaitForPendingFinalizers()
-}
+    $funcGlobalStr = "{0:N2}%" -f $funcGlobal
 
-# Calcular % Funcionamiento Global
-$funcGlobal = 100.00
-if ($totalCamaras -gt 0) {
-    $funcGlobal = [Math]::Round(((($totalCamaras - $totalSinVisual - $totalMortSinVisual) / $totalCamaras) * 100), 2)
-}
-$funcGlobalStr = "{0:N2}%" -f $funcGlobal
-
-# Configuración visual por empresa
-$headerBg = "linear-gradient(135deg, #093c71 0%, #06264a 100%)"
-$accentColor = "#093c71"
-$logoPath = "$workingDir\assets\logos\Camanchaca logo.png"
-
-if ($currentEmpresa -eq "Cermaq") {
-    $headerBg = "linear-gradient(135deg, #006666 0%, #004d4d 100%)"
-    $accentColor = "#006666"
-    $logoPath = "$workingDir\assets\logos\Cermaq logo.jpg"
-} elseif ($currentEmpresa -eq "Mowi") {
-    $headerBg = "linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)"
-    $accentColor = "#1a1a1a"
-    $logoPath = "$workingDir\assets\logos\Mowi logo.png"
-} else {
+    # Configuración visual por empresa
     $headerBg = "linear-gradient(135deg, #093c71 0%, #06264a 100%)"
     $accentColor = "#093c71"
     $logoPath = "$workingDir\assets\logos\Camanchaca logo.png"
-}
 
-$logoSvg = ""
-if (Test-Path $logoPath) {
-    $b64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($logoPath))
-    $mime = "image/png"
-    if ($logoPath -like "*.jpg") { $mime = "image/jpeg" }
-    $logoSvg = "<img src='data:$mime;base64,$b64' style='max-height: 40px; max-width: 170px; object-fit: contain;' alt='$currentEmpresa' />"
-}
-
-# Formatear Fecha de Actualización
-$mesesDict = @{ "01"="Enero"; "02"="Febrero"; "03"="Marzo"; "04"="Abril"; "05"="Mayo"; "06"="Junio"; "07"="Julio"; "08"="Agosto"; "09"="Septiembre"; "10"="Octubre"; "11"="Noviembre"; "12"="Diciembre" }
-$fechaActualizado = $fechaPestana
-if ($fechaPestana -match "(\d{1,2})[-/\.\s](\d{1,2})[-/\.\s](\d{2,4})") {
-    $diaStr = $Matches[1]
-    $mNumStr = $Matches[2].PadLeft(2, '0')
-    $anioStr = $Matches[3]
-    if ($anioStr.Length -eq 2) { $anioStr = "20$anioStr" }
-    if ($mesesDict.ContainsKey($mNumStr)) {
-        $fechaActualizado = "$diaStr de $($mesesDict[$mNumStr]) de $anioStr"
+    if ($currentEmpresa -eq "Cermaq") {
+        $headerBg = "linear-gradient(135deg, #006666 0%, #004d4d 100%)"
+        $accentColor = "#006666"
+        $logoPath = "$workingDir\assets\logos\Cermaq logo.jpg"
+    } elseif ($currentEmpresa -eq "Mowi") {
+        $headerBg = "linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)"
+        $accentColor = "#1a1a1a"
+        $logoPath = "$workingDir\assets\logos\Mowi logo.png"
     } else {
-        $fechaActualizado = "$diaStr/$mNumStr/$anioStr"
+        $headerBg = "linear-gradient(135deg, #093c71 0%, #06264a 100%)"
+        $accentColor = "#093c71"
+        $logoPath = "$workingDir\assets\logos\Camanchaca logo.png"
     }
-} elseif (-not $fechaActualizado -or $fechaActualizado.Trim() -eq "") {
-    $fechaActualizado = $excelFiles[0].LastWriteTime.ToString("dd/MM/yyyy")
-}
 
-# ==================================================
-# Sincronización Automática con reporte_semanal.html (Live Server)
-# ==================================================
-if (Test-Path $reporteHtmlPath) {
-    try {
-        $htmlContent = [System.IO.File]::ReadAllText($reporteHtmlPath, [System.Text.Encoding]::UTF8)
-        $nl = "`r`n"
+    $logoSvg = ""
+    if (Test-Path $logoPath) {
+        $b64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($logoPath))
+        $mime = "image/png"
+        if ($logoPath -like "*.jpg") { $mime = "image/jpeg" }
+        $logoSvg = "<img src='data:$mime;base64,$b64' style='max-height: 40px; max-width: 170px; object-fit: contain;' alt='$currentEmpresa' />"
+    }
 
-        # 1. Construir JS Array de Centros
-        $jsCentrosItems = @()
-        foreach ($cItem in $centrosList) {
-            $cNameJs = ConvertTo-JsString ([string]$cItem.Centro)
-            $cRegJs = ConvertTo-JsString ([string]$cItem.Region)
-            $cObsJs = ConvertTo-JsString ([string]$cItem.Observaciones)
-            $jsCentrosItems += "      { centro: $cNameJs, reg: $cRegJs, jaulas: $($cItem.Jaulas), camaras: $($cItem.Camaras), obs: $cObsJs }"
+    # Logo Omnifish para el PDF en Base64
+    $omniLogoPath = "$workingDir\assets\logos\Omnifish logo.png"
+    $omniLogoImg = ""
+    if (Test-Path $omniLogoPath) {
+        $omniB64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($omniLogoPath))
+        $omniLogoImg = "<img src='data:image/png;base64,$omniB64' alt='Omnifish' />"
+    } else {
+        $omniLogoImg = "<img src='assets/logos/Omnifish logo.png' alt='Omnifish' />"
+    }
+
+    # Formatear Fecha de Actualización
+    $mesesDict = @{ "01"="Enero"; "02"="Febrero"; "03"="Marzo"; "04"="Abril"; "05"="Mayo"; "06"="Junio"; "07"="Julio"; "08"="Agosto"; "09"="Septiembre"; "10"="Octubre"; "11"="Noviembre"; "12"="Diciembre" }
+    $fechaActualizado = $fechaPestana
+    if ($fechaPestana -match "(\d{1,2})[-/\.\s](\d{1,2})[-/\.\s](\d{2,4})") {
+        $diaStr = $Matches[1]
+        $mNumStr = $Matches[2].PadLeft(2, '0')
+        $anioStr = $Matches[3]
+        if ($anioStr.Length -eq 2) { $anioStr = "20$anioStr" }
+        if ($mesesDict.ContainsKey($mNumStr)) {
+            $fechaActualizado = "$diaStr de $($mesesDict[$mNumStr]) de $anioStr"
+        } else {
+            $fechaActualizado = "$diaStr/$mNumStr/$anioStr"
         }
-        $jsDataArrayStr = "const data$currentEmpresa = [$nl" + ($jsCentrosItems -join ",$nl") + "$nl    ];"
-        $patternArray = "(?s)const data$currentEmpresa = \[.*?\];"
-        $htmlContent = [regex]::Replace($htmlContent, $patternArray, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $jsDataArrayStr })
+    } elseif (-not $fechaActualizado -or $fechaActualizado.Trim() -eq "") {
+        $fechaActualizado = $excelFiles[0].LastWriteTime.ToString("dd/MM/yyyy")
+    }
 
-        # 2. Construir JS Array Regional
-        $regionalJsItems = @()
-        foreach ($rKey in $regiones.Keys | Sort-Object) {
-            $rData = $regiones[$rKey]
-            $rFunc = 100.00
-            if ($rData.Camaras -gt 0) {
-                $rFunc = [Math]::Round(((($rData.Camaras - $rData.SinVisual - $rData.MortSinVisual) / $rData.Camaras) * 100), 2)
+    # ==================================================
+    # Sincronización Automática con reporte_semanal.html (Live Server)
+    # ==================================================
+    if (Test-Path $reporteHtmlPath) {
+        try {
+            $htmlContent = [System.IO.File]::ReadAllText($reporteHtmlPath, [System.Text.Encoding]::UTF8)
+            $nl = "`r`n"
+
+            # 1. Construir JS Array de Centros de forma segura
+            $jsCentrosItems = @()
+            foreach ($cItem in $centrosList) {
+                $cNameJs = ConvertTo-JsString ([string]$cItem.Centro)
+                $cRegJs = ConvertTo-JsString ([string]$cItem.Region)
+                $cObsJs = ConvertTo-JsString ([string]$cItem.Observaciones)
+                $jsCentrosItems += "      { centro: $cNameJs, reg: $cRegJs, jaulas: $($cItem.Jaulas), camaras: $($cItem.Camaras), obs: $cObsJs }"
             }
-            $rFuncStr = "{0:N2}%" -f $rFunc
-            $rKeyJs = ConvertTo-JsString ([string]$rKey)
-            $rFuncJs = ConvertTo-JsString $rFuncStr
-            $regionalJsItems += "          { reg: $rKeyJs, centros: $($rData.Centros), jaulas: $($rData.Jaulas), camaras: $($rData.Camaras), fallas: $($rData.SinVisual), mortFallas: $($rData.MortSinVisual), func: $rFuncJs }"
-        }
-        $regionalJsStr = "[$nl" + ($regionalJsItems -join ",$nl") + "$nl        ]"
+            $jsDataArrayStr = "const data$currentEmpresa = [$nl" + ($jsCentrosItems -join ",$nl") + "$nl    ];"
+            $patternArray = "(?s)const data$currentEmpresa = \[.*?\];"
+            $htmlContent = [regex]::Replace($htmlContent, $patternArray, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $jsDataArrayStr })
 
-        $totalOperativas = $totalCamaras - $totalSinVisual - $totalMortSinVisual
-        $fechaActualizadoJs = ConvertTo-JsString "Actualizado: $fechaActualizado"
+            # 2. Construir JS Array Regional
+            $regionalJsItems = @()
+            foreach ($rKey in $regiones.Keys | Sort-Object) {
+                $rData = $regiones[$rKey]
+                $rFunc = 100.00
+                if ($rData.Camaras -gt 0) {
+                    $rFunc = [Math]::Round(((($rData.Camaras - $rData.SinVisual - $rData.MortSinVisual) / $rData.Camaras) * 100), 2)
+                }
+                $rFuncStr = "{0:N2}%" -f $rFunc
+                $rKeyJs = ConvertTo-JsString ([string]$rKey)
+                $rFuncJs = ConvertTo-JsString $rFuncStr
+                $regionalJsItems += "          { reg: $rKeyJs, centros: $($rData.Centros), jaulas: $($rData.Jaulas), camaras: $($rData.Camaras), fallas: $($rData.SinVisual), mortFallas: $($rData.MortSinVisual), func: $rFuncJs }"
+            }
+            $regionalJsStr = "[$nl" + ($regionalJsItems -join ",$nl") + "$nl        ]"
 
-        # 3. Actualizar bloque switchCompany en JS
-        if ($currentEmpresa -eq "Cermaq") {
-            $switchBlock = @"
+            $totalOperativas = $totalCamaras - $totalSinVisual - $totalMortSinVisual
+
+            # 3. Actualizar bloque switchCompany en JS
+            if ($currentEmpresa -eq "Cermaq") {
+                $switchBlock = @"
       } else if (company === 'cermaq') {
         document.title = 'Reporte Cermaq $anioReporte Semana $semanaNum';
         if (header1) header1.classList.add('cermaq');
@@ -374,7 +385,7 @@ if (Test-Path $reporteHtmlPath) {
         if (title2) title2.innerHTML = 'DETALLE OPERATIVO & INSIGHTS';
         if (footer1) footer1.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte CERMAQ $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2</span>';
         if (footer2) footer2.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte CERMAQ $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2</span>';
-        if (dateText) dateText.textContent = $fechaActualizadoJs;
+        if (dateText) dateText.innerHTML = 'Actualizado: $fechaActualizado';
         
         if (tableHeaderReg) {
           tableHeaderReg.innerHTML = ``
@@ -398,10 +409,10 @@ if (Test-Path $reporteHtmlPath) {
         renderCentersTable(dataCermaq);
       }
 "@
-            $patternSwitch = "(?s)\}\s*else if \(company === 'cermaq'\) \{.*?renderCentersTable\(dataCermaq\);\s*\}"
-            $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $switchBlock })
-        } elseif ($currentEmpresa -eq "Camanchaca") {
-            $switchBlock = @"
+                $patternSwitch = "(?s)\}\s*else if \(company === 'cermaq'\) \{.*?renderCentersTable\(dataCermaq\);\s*\}"
+                $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $switchBlock })
+            } elseif ($currentEmpresa -eq "Camanchaca") {
+                $switchBlock = @"
       if (company === 'camanchaca') {
         document.title = 'Reporte Camanchaca $anioReporte Semana $semanaNum';
         if (logoCam1) logoCam1.style.display = 'block';
@@ -410,7 +421,7 @@ if (Test-Path $reporteHtmlPath) {
         if (title2) title2.innerHTML = 'DETALLE OPERATIVO & INSIGHTS';
         if (footer1) footer1.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte CAMANCHACA $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2</span>';
         if (footer2) footer2.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte CAMANCHACA $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2</span>';
-        if (dateText) dateText.textContent = $fechaActualizadoJs;
+        if (dateText) dateText.innerHTML = 'Actualizado: $fechaActualizado';
         
         if (tableHeaderReg) {
           tableHeaderReg.innerHTML = ``
@@ -434,10 +445,10 @@ if (Test-Path $reporteHtmlPath) {
         renderCentersTable(dataCamanchaca);
       }
 "@
-            $patternSwitch = "(?s)\s*if \(company === 'camanchaca'\) \{.*?renderCentersTable\(dataCamanchaca\);\s*\}"
-            $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $switchBlock })
-        } elseif ($currentEmpresa -eq "Mowi") {
-            $switchBlock = @"
+                $patternSwitch = "(?s)\s*if \(company === 'camanchaca'\) \{.*?renderCentersTable\(dataCamanchaca\);\s*\}"
+                $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $switchBlock })
+            } elseif ($currentEmpresa -eq "Mowi") {
+                $switchBlock = @"
       } else if (company === 'mowi') {
         document.title = 'Reporte Mowi $anioReporte Semana $semanaNum';
         if (header1) header1.classList.add('mowi');
@@ -448,7 +459,7 @@ if (Test-Path $reporteHtmlPath) {
         if (title2) title2.innerHTML = 'DETALLE OPERATIVO & INSIGHTS';
         if (footer1) footer1.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte MOWI $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2</span>';
         if (footer2) footer2.innerHTML = '<div class="footer-omnifish"><img src="assets/logos/Omnifish logo.png" alt="Omnifish" /> Powered by Omnifish</div><span>Reporte MOWI $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2</span>';
-        if (dateText) dateText.textContent = $fechaActualizadoJs;
+        if (dateText) dateText.innerHTML = 'Actualizado: $fechaActualizado';
         
         if (tableHeaderReg) {
           tableHeaderReg.innerHTML = ``
@@ -472,29 +483,29 @@ if (Test-Path $reporteHtmlPath) {
         renderCentersTable(dataMowi);
       }
 "@
-            $patternSwitch = "(?s)\}\s*else if \(company === 'mowi'\) \{.*?renderCentersTable\(dataMowi\);\s*\}"
-            $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $switchBlock })
+                $patternSwitch = "(?s)\}\s*else if \(company === 'mowi'\) \{.*?renderCentersTable\(dataMowi\);\s*\}"
+                $htmlContent = [regex]::Replace($htmlContent, $patternSwitch, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) return $switchBlock })
+            }
+
+            [System.IO.File]::WriteAllText($reporteHtmlPath, $htmlContent, [System.Text.UTF8Encoding]::new($false))
+            Write-Host "Vista previa HTML (reporte_semanal.html) actualizada automáticamente para $currentEmpresa."
+        } catch {
+            Write-Host "Aviso: No se pudo actualizar reporte_semanal.html: $_"
         }
-
-        [System.IO.File]::WriteAllText($reporteHtmlPath, $htmlContent, [System.Text.UTF8Encoding]::new($false))
-        Write-Host "Vista previa HTML (reporte_semanal.html) actualizada automáticamente para $currentEmpresa."
-    } catch {
-        Write-Host "Aviso: No se pudo actualizar reporte_semanal.html: $_"
     }
-}
 
-# Filas de la tabla por región
-$tableRowsHtml = ""
-foreach ($rKey in $regiones.Keys | Sort-Object) {
-    $rData = $regiones[$rKey]
-    $rFunc = 100.00
-    if ($rData.Camaras -gt 0) {
-        $rFunc = [Math]::Round(((($rData.Camaras - $rData.SinVisual - $rData.MortSinVisual) / $rData.Camaras) * 100), 2)
-    }
-    $rFuncStr = "{0:N2}%" -f $rFunc
-    $rKeyHtml = [System.Net.WebUtility]::HtmlEncode([string]$rKey)
+    # Filas de la tabla por región
+    $tableRowsHtml = ""
+    foreach ($rKey in $regiones.Keys | Sort-Object) {
+        $rData = $regiones[$rKey]
+        $rFunc = 100.00
+        if ($rData.Camaras -gt 0) {
+            $rFunc = [Math]::Round(((($rData.Camaras - $rData.SinVisual - $rData.MortSinVisual) / $rData.Camaras) * 100), 2)
+        }
+        $rFuncStr = "{0:N2}%" -f $rFunc
+        $rKeyHtml = [System.Net.WebUtility]::HtmlEncode([string]$rKey)
 
-    $tableRowsHtml += @"
+        $tableRowsHtml += @"
       <tr>
         <td><strong>$rKeyHtml</strong></td>
         <td>$($rData.Centros)</td>
@@ -505,10 +516,10 @@ foreach ($rKey in $regiones.Keys | Sort-Object) {
         <td><span class="status-badge-green">$rFuncStr</span></td>
       </tr>
 "@
-}
+    }
 
-# Encabezados de tabla según empresa
-$tableHeaderHtml = @"
+    # Encabezados de tabla según empresa
+    $tableHeaderHtml = @"
       <tr>
         <th>Regi&oacute;n</th>
         <th>Centros</th>
@@ -520,58 +531,57 @@ $tableHeaderHtml = @"
       </tr>
 "@
 
-# --- GENERADOR DINÁMICO DE GRÁFICOS SVG ---
-$totalFalladas = $totalSinVisual + $totalMortSinVisual
-$totalOperativas = [Math]::Max(0, ($totalCamaras - $totalFalladas))
-$healthCoverageText = "$totalCentros centros / $totalJaulas jaulas"
-$healthIncidentsText = if ($totalFalladas -eq 0) { "Sin cámaras con falla" } else { "$totalFalladas cámara(s) sin visual" }
-$healthOverallText = if ($funcGlobal -ge 95) {
-    "Disponibilidad alta"
-} elseif ($funcGlobal -ge 85) {
-    "Disponibilidad media"
-} else {
-    "Disponibilidad crítica"
-}
-$regionKeys = @($regiones.Keys | Sort-Object)
-$numRegiones = $regionKeys.Count
-if ($numRegiones -eq 0) { $numRegiones = 1 }
-
-# 1. Gráfico: Centros Activos por Región
-$maxCentros = 1
-foreach ($rk in $regionKeys) {
-    if ($regiones[$rk].Centros -gt $maxCentros) { $maxCentros = $regiones[$rk].Centros }
-}
-$barColors = @("#1e62c0", "#48c6ff", "#00a86b", "#9333ea")
-$barsCentrosSvg = ""
-for ($ri = 0; $ri -lt $regionKeys.Count; $ri++) {
-    $rk = $regionKeys[$ri]
-    $rCentros = $regiones[$rk].Centros
-    $bColor = $barColors[$ri % $barColors.Count]
-    
-    if ($numRegiones -eq 1) {
-        $bw = 60
-        $bx = 100
-    } elseif ($numRegiones -eq 2) {
-        $bw = 50
-        $bx = if ($ri -eq 0) { 60 } else { 150 }
+    # --- GENERADOR DINÁMICO DE GRÁFICOS SVG ---
+    $totalFalladas = $totalSinVisual + $totalMortSinVisual
+    $totalOperativas = [Math]::Max(0, ($totalCamaras - $totalFalladas))
+    $healthOverallText = if ($funcGlobal -ge 95) {
+        "Disponibilidad Alta"
+    } elseif ($funcGlobal -ge 85) {
+        "Disponibilidad Media"
     } else {
-        $bw = [Math]::Max(25, [Math]::Min(45, [int](180 / $numRegiones)))
-        $step = [int](200 / $numRegiones)
-        $bx = 35 + ($ri * $step)
+        "Disponibilidad Crítica"
     }
-    
-    $bh = [Math]::Max(10, [int][Math]::Round(($rCentros / $maxCentros) * 70))
-    $by = 95 - $bh
-    $tx = $bx + [int]($bw / 2)
-    
-    $barsCentrosSvg += @"
+
+    $regionKeys = @($regiones.Keys | Sort-Object)
+    $numRegiones = $regionKeys.Count
+    if ($numRegiones -eq 0) { $numRegiones = 1 }
+
+    # 1. Gráfico: Centros Activos por Región
+    $maxCentros = 1
+    foreach ($rk in $regionKeys) {
+        if ($regiones[$rk].Centros -gt $maxCentros) { $maxCentros = $regiones[$rk].Centros }
+    }
+    $barColors = @("#1e62c0", "#48c6ff", "#00a86b", "#9333ea")
+    $barsCentrosSvg = ""
+    for ($ri = 0; $ri -lt $regionKeys.Count; $ri++) {
+        $rk = $regionKeys[$ri]
+        $rCentros = $regiones[$rk].Centros
+        $bColor = $barColors[$ri % $barColors.Count]
+        
+        if ($numRegiones -eq 1) {
+            $bw = 60
+            $bx = 100
+        } elseif ($numRegiones -eq 2) {
+            $bw = 50
+            $bx = if ($ri -eq 0) { 60 } else { 150 }
+        } else {
+            $bw = [Math]::Max(25, [Math]::Min(45, [int](180 / $numRegiones)))
+            $step = [int](200 / $numRegiones)
+            $bx = 35 + ($ri * $step)
+        }
+        
+        $bh = [Math]::Max(10, [int][Math]::Round(($rCentros / $maxCentros) * 70))
+        $by = 95 - $bh
+        $tx = $bx + [int]($bw / 2)
+        
+        $barsCentrosSvg += @"
         <rect x="$bx" y="$by" width="$bw" height="$bh" fill="$bColor" rx="3" />
         <text x="$tx" y="$($by - 5)" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">$rCentros</text>
         <text x="$tx" y="110" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">$rk</text>
 "@
-}
+    }
 
-$svgChartCentros = @"
+    $svgChartCentros = @"
       <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
         <line x1="25" y1="15" x2="245" y2="15" stroke="#e2e8f0" stroke-dasharray="3,3" />
         <line x1="25" y1="45" x2="245" y2="45" stroke="#e2e8f0" stroke-dasharray="3,3" />
@@ -581,46 +591,46 @@ $barsCentrosSvg
       </svg>
 "@
 
-# 2. Gráfico: Funcionamiento Promedio por Región
-$barsFuncSvg = ""
-for ($ri = 0; $ri -lt $regionKeys.Count; $ri++) {
-    $rk = $regionKeys[$ri]
-    $rData = $regiones[$rk]
-    $rFunc = 100.00
-    if ($rData.Camaras -gt 0) {
-        $rFunc = [Math]::Round(((($rData.Camaras - $rData.SinVisual - $rData.MortSinVisual) / $rData.Camaras) * 100), 2)
-    }
-    $rFuncStr = "{0:N2}%" -f $rFunc
-    $rFuncDisplay = if ($rFunc -eq 100.00) { "100%" } else { $rFuncStr }
-    
-    $fColor = "#00a86b"
-    if ($rFunc -lt 85.00) { $fColor = "#ef4444" }
-    elseif ($rFunc -lt 95.00) { $fColor = "#f59e0b" }
-    
-    if ($numRegiones -eq 1) {
-        $bw = 60
-        $bx = 100
-    } elseif ($numRegiones -eq 2) {
-        $bw = 50
-        $bx = if ($ri -eq 0) { 65 } else { 155 }
-    } else {
-        $bw = [Math]::Max(25, [Math]::Min(45, [int](180 / $numRegiones)))
-        $step = [int](200 / $numRegiones)
-        $bx = 35 + ($ri * $step)
-    }
-    
-    $bh = [Math]::Max(10, [int][Math]::Round(($rFunc / 100.0) * 75))
-    $by = 95 - $bh
-    $tx = $bx + [int]($bw / 2)
-    
-    $barsFuncSvg += @"
+    # 2. Gráfico: Funcionamiento Promedio por Región
+    $barsFuncSvg = ""
+    for ($ri = 0; $ri -lt $regionKeys.Count; $ri++) {
+        $rk = $regionKeys[$ri]
+        $rData = $regiones[$rk]
+        $rFunc = 100.00
+        if ($rData.Camaras -gt 0) {
+            $rFunc = [Math]::Round(((($rData.Camaras - $rData.SinVisual - $rData.MortSinVisual) / $rData.Camaras) * 100), 2)
+        }
+        $rFuncStr = "{0:N2}%" -f $rFunc
+        $rFuncDisplay = if ($rFunc -eq 100.00) { "100%" } else { $rFuncStr }
+        
+        $fColor = "#00a86b"
+        if ($rFunc -lt 85.00) { $fColor = "#ef4444" }
+        elseif ($rFunc -lt 95.00) { $fColor = "#f59e0b" }
+        
+        if ($numRegiones -eq 1) {
+            $bw = 60
+            $bx = 100
+        } elseif ($numRegiones -eq 2) {
+            $bw = 50
+            $bx = if ($ri -eq 0) { 65 } else { 155 }
+        } else {
+            $bw = [Math]::Max(25, [Math]::Min(45, [int](180 / $numRegiones)))
+            $step = [int](200 / $numRegiones)
+            $bx = 35 + ($ri * $step)
+        }
+        
+        $bh = [Math]::Max(10, [int][Math]::Round(($rFunc / 100.0) * 75))
+        $by = 95 - $bh
+        $tx = $bx + [int]($bw / 2)
+        
+        $barsFuncSvg += @"
         <rect x="$bx" y="$by" width="$bw" height="$bh" fill="$fColor" rx="3" />
         <text x="$tx" y="$($by - 5)" font-size="10" font-weight="bold" fill="$fColor" text-anchor="middle">$rFuncDisplay</text>
         <text x="$tx" y="110" font-size="11" font-weight="bold" fill="#0f2744" text-anchor="middle">$rk</text>
 "@
-}
+    }
 
-$svgChartFunc = @"
+    $svgChartFunc = @"
       <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
         <line x1="25" y1="20" x2="245" y2="20" stroke="#e2e8f0" stroke-dasharray="3,3" />
         <line x1="25" y1="55" x2="245" y2="55" stroke="#e2e8f0" stroke-dasharray="3,3" />
@@ -629,27 +639,27 @@ $barsFuncSvg
       </svg>
 "@
 
-# 3. Gráfico: Estado de Cámaras Submarinas (Donut)
-$pctOp = 1.0
-if ($totalCamaras -gt 0) {
-    $pctOp = $totalOperativas / $totalCamaras
-}
-$cCircumference = 226.19
-$dashVal = [Math]::Round($pctOp * $cCircumference, 1)
+    # 3. Gráfico: Estado de Cámaras (Submarinas, Cono y PTZ) (Donut)
+    $pctOp = 1.0
+    if ($totalCamaras -gt 0) {
+        $pctOp = $totalOperativas / $totalCamaras
+    }
+    $cCircumference = 226.19
+    $dashVal = [Math]::Round($pctOp * $cCircumference, 1)
 
-$donutGreenStroke = ""
-if ($pctOp -ge 1.0) {
-    $donutGreenStroke = @"
+    $donutGreenStroke = ""
+    if ($pctOp -ge 1.0) {
+        $donutGreenStroke = @"
         <circle cx="75" cy="58" r="36" fill="none" stroke="#00a86b" stroke-width="14" />
 "@
-} else {
-    $donutGreenStroke = @"
+    } else {
+        $donutGreenStroke = @"
         <circle cx="75" cy="58" r="36" fill="none" stroke="#ef4444" stroke-width="14" />
         <circle cx="75" cy="58" r="36" fill="none" stroke="#00a86b" stroke-width="14" stroke-dasharray="$dashVal $cCircumference" stroke-dashoffset="0" transform="rotate(-90 75 58)" />
 "@
-}
+    }
 
-$svgChartDonut = @"
+    $svgChartDonut = @"
       <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
 $donutGreenStroke
         <text x="75" y="56" font-size="12" font-weight="bold" fill="#0f2744" text-anchor="middle">$funcGlobalStr</text>
@@ -666,49 +676,49 @@ $donutGreenStroke
       </svg>
 "@
 
-# 4. Gráfico: Relación Jaulas vs Cámaras
-$maxValJC = 1
-foreach ($rk in $regionKeys) {
-    if ($regiones[$rk].Jaulas -gt $maxValJC) { $maxValJC = $regiones[$rk].Jaulas }
-    if ($regiones[$rk].Camaras -gt $maxValJC) { $maxValJC = $regiones[$rk].Camaras }
-}
-
-$barsJCSvg = ""
-for ($ri = 0; $ri -lt $regionKeys.Count; $ri++) {
-    $rk = $regionKeys[$ri]
-    $rJau = $regiones[$rk].Jaulas
-    $rCam = $regiones[$rk].Camaras
-    
-    if ($numRegiones -eq 1) {
-        $bw = 25
-        $jx = 95
-        $cx = 125
-        $tx = 122
-    } elseif ($numRegiones -eq 2) {
-        $bw = 20
-        if ($ri -eq 0) { $jx = 50; $cx = 73; $tx = 71 }
-        else { $jx = 145; $cx = 168; $tx = 166 }
-    } else {
-        $bw = [Math]::Max(12, [int](80 / $numRegiones))
-        $step = [int](200 / $numRegiones)
-        $jx = 35 + ($ri * $step)
-        $cx = $jx + $bw + 3
-        $tx = $jx + $bw
+    # 4. Gráfico: Relación Jaulas vs Cámaras
+    $maxValJC = 1
+    foreach ($rk in $regionKeys) {
+        if ($regiones[$rk].Jaulas -gt $maxValJC) { $maxValJC = $regiones[$rk].Jaulas }
+        if ($regiones[$rk].Camaras -gt $maxValJC) { $maxValJC = $regiones[$rk].Camaras }
     }
-    
-    $jh = [Math]::Max(8, [int][Math]::Round(($rJau / $maxValJC) * 65))
-    $ch = [Math]::Max(8, [int][Math]::Round(($rCam / $maxValJC) * 65))
-    $jy = 95 - $jh
-    $cy = 95 - $ch
-    
-    $barsJCSvg += @"
+
+    $barsJCSvg = ""
+    for ($ri = 0; $ri -lt $regionKeys.Count; $ri++) {
+        $rk = $regionKeys[$ri]
+        $rJau = $regiones[$rk].Jaulas
+        $rCam = $regiones[$rk].Camaras
+        
+        if ($numRegiones -eq 1) {
+            $bw = 25
+            $jx = 95
+            $cx = 125
+            $tx = 122
+        } elseif ($numRegiones -eq 2) {
+            $bw = 20
+            if ($ri -eq 0) { $jx = 50; $cx = 73; $tx = 71 }
+            else { $jx = 145; $cx = 168; $tx = 166 }
+        } else {
+            $bw = [Math]::Max(12, [int](80 / $numRegiones))
+            $step = [int](200 / $numRegiones)
+            $jx = 35 + ($ri * $step)
+            $cx = $jx + $bw + 3
+            $tx = $jx + $bw
+        }
+        
+        $jh = [Math]::Max(8, [int][Math]::Round(($rJau / $maxValJC) * 65))
+        $ch = [Math]::Max(8, [int][Math]::Round(($rCam / $maxValJC) * 65))
+        $jy = 95 - $jh
+        $cy = 95 - $ch
+        
+        $barsJCSvg += @"
         <rect x="$jx" y="$jy" width="$bw" height="$jh" fill="#093c71" rx="2" />
         <rect x="$cx" y="$cy" width="$bw" height="$ch" fill="#0099e5" rx="2" />
         <text x="$tx" y="110" font-size="10" font-weight="bold" fill="#0f2744" text-anchor="middle">$rk</text>
 "@
-}
+    }
 
-$svgChartJaulasCamaras = @"
+    $svgChartJaulasCamaras = @"
       <svg width="100%" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
         <line x1="25" y1="95" x2="245" y2="95" stroke="#cbd5e1" stroke-width="1" />
 $barsJCSvg
@@ -719,9 +729,77 @@ $barsJCSvg
       </svg>
 "@
 
-# Construir HTML Completo
-$fechaActualizadoHtml = [System.Net.WebUtility]::HtmlEncode([string]$fechaActualizado)
-$htmlTemplate = @"
+    # --- CONSTRUIR RESUMEN EJECUTIVO DINÁMICO (PARA PDF) ---
+    $execItems = @()
+    $operativas = [Math]::Max(0, ($totalCamaras - $totalFalladas))
+
+    # 1. Estado general
+    if ($funcGlobal -ge 100.0) {
+        $execItems += "<li class='good'>Todas las $totalCamaras c&aacute;maras operativas al 100%. Sin incidencias esta semana.</li>"
+    } elseif ($funcGlobal -ge 95.0) {
+        $execItems += "<li class='good'>Funcionamiento global del $($funcGlobalStr): $operativas de $totalCamaras c&aacute;maras operativas.</li>"
+    } elseif ($funcGlobal -ge 85.0) {
+        $execItems += "<li class='warn'>Funcionamiento global del $($funcGlobalStr): $totalFalladas c&aacute;maras presentan fallas de un total de $totalCamaras.</li>"
+    } else {
+        $execItems += "<li class='bad'>Funcionamiento global cr&iacute;tico ($($funcGlobalStr)): $totalFalladas c&aacute;maras sin visual de $totalCamaras totales.</li>"
+    }
+
+    # 2. Cobertura
+    $numRegCount = $regionKeys.Count
+    $execItems += "<li class='info'>Se monitorean $totalCentros centros activos con $totalJaulas jaulas y $totalCamaras c&aacute;maras en $numRegCount regi&oacute;n(es).</li>"
+
+    # 3. Regiones con fallas
+    foreach ($rk in $regionKeys) {
+        $rData = $regiones[$rk]
+        $tf = $rData.SinVisual + $rData.MortSinVisual
+        if ($tf -gt 0) {
+            $rFunc = 100.00
+            if ($rData.Camaras -gt 0) {
+                $rFunc = [Math]::Round(((($rData.Camaras - $tf) / $rData.Camaras) * 100), 2)
+            }
+            $rFuncStr = "{0:N2}%" -f $rFunc
+            $execItems += "<li class='warn'>Regi&oacute;n $($rk): $tf c&aacute;mara(s) con falla ($($rData.SinVisual) est&aacute;ndar + $($rData.MortSinVisual) mortalidad). Funcionamiento: $rFuncStr.</li>"
+        }
+    }
+
+    # 4. Regiones al 100%
+    $regOk = @()
+    foreach ($rk in $regionKeys) {
+        $rData = $regiones[$rk]
+        if (($rData.SinVisual + $rData.MortSinVisual) -eq 0) {
+            $regOk += $rk
+        }
+    }
+    if ($regOk.Count -gt 0) {
+        $names = $regOk -join ", "
+        $execItems += "<li class='good'>Regi&oacute;n(es) $($names): funcionamiento al 100% sin incidencias.</li>"
+    }
+
+    # 5. Centros con observaciones relevantes o cosecha
+    $alertasCount = 0
+    $cosechaCentros = @()
+    foreach ($cItem in $centrosList) {
+        $obsLower = $cItem.Observaciones.ToLower()
+        if ($obsLower -ne "sin novedad" -and -not $obsLower.Contains("sin novedad")) {
+            $alertasCount++
+        }
+        if ($obsLower.Contains("cosech")) {
+            $cosechaCentros += $cItem.Centro
+        }
+    }
+    if ($alertasCount -gt 0) {
+        $execItems += "<li class='info'>$alertasCount centro(s) reportan observaciones operativas que requieren seguimiento (ver P&aacute;gina 2).</li>"
+    }
+    if ($cosechaCentros.Count -gt 0) {
+        $nombresCosecha = ($cosechaCentros | Select-Object -Unique) -join ", "
+        $execItems += "<li class='warn'>Centro(s) en proceso de cosecha: $nombresCosecha.</li>"
+    }
+
+    $execSummaryItemsHtml = $execItems -join "`r`n        "
+
+    # Construir HTML Completo para PDF
+    $fechaActualizadoHtml = [System.Net.WebUtility]::HtmlEncode([string]$fechaActualizado)
+    $htmlTemplate = @"
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -743,6 +821,7 @@ $htmlTemplate = @"
     background-color: #ffffff;
     font-size: 12px;
     -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   .header-container {
@@ -805,44 +884,52 @@ $htmlTemplate = @"
     width: 5px;
     height: 18px;
     background-color: $accentColor;
-    margin-right: 8px;
     border-radius: 2px;
+    margin-right: 8px;
   }
   .section-title {
-    font-size: 14px;
-    font-weight: 800;
-    color: $accentColor;
+    font-size: 13.5px;
+    font-weight: 700;
     text-transform: uppercase;
+    color: #0f2744;
     letter-spacing: 0.5px;
   }
 
   .kpi-grid {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 12px;
     margin-bottom: 14px;
   }
   .kpi-card {
-    flex: 1;
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 12px 8px;
-    text-align: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background-color: $accentColor;
   }
   .kpi-title {
     font-size: 10px;
     font-weight: 700;
-    color: #5a6e85;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
+    color: #64748b;
+    margin-bottom: 4px;
+    letter-spacing: 0.4px;
   }
   .kpi-value {
-    font-size: 28px;
+    font-size: 21px;
     font-weight: 800;
-    color: $accentColor;
-    line-height: 1;
+    color: #0f2744;
   }
   .kpi-value.green {
     color: #00a86b;
@@ -892,38 +979,68 @@ $htmlTemplate = @"
     font-size: 11px;
   }
 
-  .charts-row {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
   .chart-box {
-    flex: 1;
     background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 10px 14px;
-  }
-  .chart-box-full {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 10px 14px;
-    margin-bottom: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 12px;
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
   .chart-title {
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
     color: #1e293b;
-    text-align: center;
-    margin-bottom: 6px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
   }
 
+  .exec-summary {
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 5px 12px;
+    margin-bottom: 6px;
+  }
+  .exec-summary-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 9.5px;
+    line-height: 1.35;
+    color: #334155;
+  }
+  .exec-summary-list li {
+    margin-bottom: 2px;
+  }
+  .exec-summary-list li.good { color: #166534; font-weight: 600; }
+  .exec-summary-list li.warn { color: #b45309; font-weight: 600; }
+  .exec-summary-list li.bad { color: #b91c1c; font-weight: 600; }
+  .exec-summary-list li.info { color: #0369a1; }
+
   .footer {
-    text-align: right;
-    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9.5px;
     color: #94a3b8;
-    margin-top: 8px;
+    margin-top: 4px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 4px;
+  }
+  .footer-omnifish {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 9px;
+    color: #94a3b8;
+  }
+  .footer-omnifish img {
+    height: 16px;
+    object-fit: contain;
+    opacity: 0.7;
   }
 </style>
 </head>
@@ -942,26 +1059,21 @@ $htmlTemplate = @"
     </div>
   </div>
 
-  <div class="section-header">
-    <div class="section-bar"></div>
-    <div class="section-title">M&eacute;tricas Generales</div>
-  </div>
-
   <div class="kpi-grid">
     <div class="kpi-card">
-      <div class="kpi-title">Centros Activos</div>
+      <div class="kpi-title">Centros Monitoreados</div>
       <div class="kpi-value">$totalCentros</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-title">Total Jaulas</div>
+      <div class="kpi-title">Total Jaulas Monitoreadas</div>
       <div class="kpi-value">$totalJaulas</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-title">Total de C&aacute;maras</div>
-      <div class="kpi-value">$totalCamaras</div>
+      <div class="kpi-title">C&aacute;maras Operativas</div>
+      <div class="kpi-value">$totalOperativas</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-title">Funcionamiento</div>
+      <div class="kpi-title">% Funcionamiento Global</div>
       <div class="kpi-value green">$funcGlobalStr</div>
     </div>
   </div>
@@ -985,7 +1097,7 @@ $htmlTemplate = @"
     <div class="section-title">An&aacute;lisis Visual Integrado & Salud del Sistema</div>
   </div>
 
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
     <div class="chart-box">
       <div class="chart-title">Centros Activos por Regi&oacute;n</div>
       $svgChartCentros
@@ -1007,38 +1119,52 @@ $htmlTemplate = @"
     </div>
   </div>
 
-  <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-    <div style="flex: 1; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 10px;">
+  <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+    <div style="flex: 1; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; display: flex; align-items: center; gap: 8px;">
       <div style="display: flex; align-items: center; justify-content: center;">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1.7 15.9 1.7 10.8 4.9 7.6"/><path d="M7.8 16.2c-1.6-1.6-1.6-4.1 0-5.7"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c1.6 1.6 1.6 4.1 0 5.7"/><path d="M19.1 4.9c3.2 3.2 3.2 8.3 0 11.5"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1.7 15.9 1.7 10.8 4.9 7.6"/><path d="M7.8 16.2c-1.6-1.6-1.6-4.1 0-5.7"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c1.6 1.6 1.6 4.1 0 5.7"/><path d="M19.1 4.9c3.2 3.2 3.2 8.3 0 11.5"/></svg>
       </div>
       <div>
-        <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Cobertura monitoreada</div>
-        <div style="font-size: 12px; font-weight: 700; color: #0f2744;">$healthCoverageText</div>
+        <div style="font-size: 9.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">Conectividad Remota</div>
+        <div style="font-size: 11.5px; font-weight: 700; color: #0f2744;">Enlaces Activos (100%)</div>
       </div>
     </div>
-    <div style="flex: 1; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 10px;">
+    <div style="flex: 1; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; display: flex; align-items: center; gap: 8px;">
       <div style="display: flex; align-items: center; justify-content: center;">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
       </div>
       <div>
-        <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Incidencias registradas</div>
-        <div style="font-size: 12px; font-weight: 700; color: #0f2744;">$healthIncidentsText</div>
+        <div style="font-size: 9.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">C&aacute;maras de Respaldo</div>
+        <div style="font-size: 11.5px; font-weight: 700; color: #0f2744;">Sistemas Habilitados</div>
       </div>
     </div>
-    <div style="flex: 1; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 10px;">
+    <div style="flex: 1; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; display: flex; align-items: center; gap: 8px;">
       <div style="display: flex; align-items: center; justify-content: center;">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#093c71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
       </div>
       <div>
-        <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Salud General</div>
-        <div style="font-size: 12px; font-weight: 700; color: #0f2744;">$healthOverallText</div>
+        <div style="font-size: 9.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">Salud General</div>
+        <div style="font-size: 11.5px; font-weight: 700; color: #0f2744;">$healthOverallText</div>
       </div>
     </div>
   </div>
 
+  <div class="section-header">
+    <div class="section-bar"></div>
+    <div class="section-title">Resumen Ejecutivo</div>
+  </div>
+
+  <div class="exec-summary">
+    <ul class="exec-summary-list">
+        $execSummaryItemsHtml
+    </ul>
+  </div>
+
   <div class="footer">
-    Reporte $($currentEmpresa.ToUpper()) $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2
+    <div class="footer-omnifish">
+      $omniLogoImg Powered by Omnifish
+    </div>
+    <span>Reporte $($currentEmpresa.ToUpper()) $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 1 de 2</span>
   </div>
 
   <!-- SALTO DE PÁGINA PARA PAGINA 2 (DETALLE DE CENTROS E INSIGHTS) -->
@@ -1072,61 +1198,64 @@ $htmlTemplate = @"
   </table>
 
   <div class="footer">
-    Reporte $($currentEmpresa.ToUpper()) $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2
+    <div class="footer-omnifish">
+      $omniLogoImg Powered by Omnifish
+    </div>
+    <span>Reporte $($currentEmpresa.ToUpper()) $anioReporte &bull; Semana $semanaNum &bull; P&aacute;gina 2 de 2</span>
   </div>
 
 </body>
 </html>
 "@
 
-if ($GenerarPDF) {
-    $tmpHtml = "$workingDir\temp_report.html"
-    $outputDir = "$workingDir\Reportes_PDF\Semana_$semanaNum"
-    if (-not (Test-Path $outputDir)) {
-        New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
-    }
-    $outputPdf = "$outputDir\Reporte $currentEmpresa $anioReporte Semana $semanaNum.pdf"
-
-    $edgeCandidates = @(
-        (Join-Path ${env:ProgramFiles(x86)} "Microsoft\Edge\Application\msedge.exe"),
-        (Join-Path $env:ProgramFiles "Microsoft\Edge\Application\msedge.exe")
-    )
-    $edgeFromPath = Get-Command msedge.exe -ErrorAction SilentlyContinue
-    if ($edgeFromPath) { $edgeCandidates += $edgeFromPath.Source }
-    $edgePath = $edgeCandidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
-    if (-not $edgePath) {
-        throw "No se encontró Microsoft Edge. Instálalo o agrega msedge.exe al PATH para generar PDF."
-    }
-
-    try {
-        [System.IO.File]::WriteAllText($tmpHtml, $htmlTemplate, [System.Text.UTF8Encoding]::new($false))
-        $tmpUri = ([System.Uri]$tmpHtml).AbsoluteUri
-        $edgeArgs = @(
-            "--headless=new",
-            "--disable-gpu",
-            "--no-pdf-header-footer",
-            "`"--print-to-pdf=$outputPdf`"",
-            "`"$tmpUri`""
-        )
-        $edgeProcess = Start-Process -FilePath $edgePath -ArgumentList $edgeArgs -Wait -PassThru -NoNewWindow
-        if ($edgeProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $outputPdf)) {
-            throw "Edge no pudo generar el PDF (código de salida: $($edgeProcess.ExitCode))."
+    if ($GenerarPDF) {
+        $tmpHtml = "$workingDir\temp_report.html"
+        $outputDir = "$workingDir\Reportes_PDF\Semana_$semanaNum"
+        if (-not (Test-Path $outputDir)) {
+            New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
         }
-    } finally {
-        if (Test-Path -LiteralPath $tmpHtml) { Remove-Item -LiteralPath $tmpHtml -Force }
-    }
+        $outputPdf = "$outputDir\Reporte $currentEmpresa $anioReporte Semana $semanaNum.pdf"
 
-    Write-Host "=================================================="
-    Write-Host "REPORTE PDF GENERADO EXITOSAMENTE:"
-    Write-Host "Empresa: $currentEmpresa"
-    Write-Host "Semana: $semanaNum"
-    Write-Host "Ruta: $outputPdf"
-    Write-Host "=================================================="
-} else {
-    Write-Host "--------------------------------------------------"
-    Write-Host "DATOS DE $currentEmpresa (Semana $semanaNum) CARGADOS EN LA WEB."
-    Write-Host "--------------------------------------------------"
-}
+        $edgeCandidates = @(
+            (Join-Path ${env:ProgramFiles(x86)} "Microsoft\Edge\Application\msedge.exe"),
+            (Join-Path $env:ProgramFiles "Microsoft\Edge\Application\msedge.exe")
+        )
+        $edgeFromPath = Get-Command msedge.exe -ErrorAction SilentlyContinue
+        if ($edgeFromPath) { $edgeCandidates += $edgeFromPath.Source }
+        $edgePath = $edgeCandidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
+        if (-not $edgePath) {
+            throw "No se encontró Microsoft Edge. Instálalo o agrega msedge.exe al PATH para generar PDF."
+        }
+
+        try {
+            [System.IO.File]::WriteAllText($tmpHtml, $htmlTemplate, [System.Text.UTF8Encoding]::new($false))
+            $tmpUri = ([System.Uri]$tmpHtml).AbsoluteUri
+            $edgeArgs = @(
+                "--headless=new",
+                "--disable-gpu",
+                "--no-pdf-header-footer",
+                "`"--print-to-pdf=$outputPdf`"",
+                "`"$tmpUri`""
+            )
+            $edgeProcess = Start-Process -FilePath $edgePath -ArgumentList $edgeArgs -Wait -PassThru -NoNewWindow
+            if ($edgeProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $outputPdf)) {
+                throw "Edge no pudo generar el PDF (código de salida: $($edgeProcess.ExitCode))."
+            }
+        } finally {
+            if (Test-Path -LiteralPath $tmpHtml) { Remove-Item -LiteralPath $tmpHtml -Force }
+        }
+
+        Write-Host "=================================================="
+        Write-Host "REPORTE PDF GENERADO EXITOSAMENTE:"
+        Write-Host "Empresa: $currentEmpresa"
+        Write-Host "Año: $anioReporte | Semana: $semanaNum"
+        Write-Host "Ruta: $outputPdf"
+        Write-Host "=================================================="
+    } else {
+        Write-Host "--------------------------------------------------"
+        Write-Host "DATOS DE $currentEmpresa ($anioReporte Semana $semanaNum) CARGADOS EN LA WEB."
+        Write-Host "--------------------------------------------------"
+    }
 }
 
 Write-Host ""

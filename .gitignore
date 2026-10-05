@@ -11,12 +11,13 @@ Datos_Excel/*
 Reportes_PDF/*
 !Reportes_PDF/.gitkeep
 
-# Archivos temporales de renderizado
+# Archivos temporales de renderizado y salida local
 temp_report.html
 *.tmp
 
-# Salida HTML generada localmente (contiene datos operativos)
+# Salida HTML generada localmente (contiene datos operativos de clientes)
 /reporte_semanal.html
+
 
 # Archivos del sistema u OS
 .DS_Store

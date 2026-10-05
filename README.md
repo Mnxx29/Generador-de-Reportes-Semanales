@@ -1,105 +1,66 @@
-# 📊 Generador de Reportes Semanales de Monitoreo
+# 📊 Generador de Reportes Semanales de Monitoreo - Omnifish
 
-Sistema para leer los archivos Excel semanales de Camanchaca, Cermaq y Mowi, calcular métricas operativas, actualizar un tablero HTML local y generar reportes PDF.
+Sistema automatizado para la actualización de tableros interactivos y generación de reportes semanales ejecutivos de monitoreo acuícola (Camanchaca, Cermaq, Mowi).
 
-El reporte incluye métricas globales y regionales, estado de cámaras, detalle por centro, observaciones y un resumen ejecutivo generado automáticamente.
+---
 
-## Requisitos
+## 📖 Flujo de Trabajo Semanal
 
-- Windows PowerShell 5.1 o PowerShell 7.
-- Microsoft Excel de escritorio, utilizado mediante automatización COM.
-- Microsoft Edge para la generación directa de PDF.
+```
+[1. Copiar Excels] ➔ [2. Ejecutar .\generar_reporte.ps1] ➔ [3. Abrir reporte_semanal.html] ➔ [4. Guardar / Imprimir PDF]
+```
 
-## Uso semanal
+### 📋 Paso 1: Guardar los archivos Excel
+Copia los archivos Excel actualizados de la semana (ej: `Reporte Camanchaca 2026 semana 40.xlsx`) dentro de la carpeta `Datos_Excel/`.
+*(No es necesario borrar los anteriores, el script detecta automáticamente el archivo más reciente de cada empresa).*
 
-1. Copia los Excel actualizados dentro de `Datos_Excel/`. El nombre debe incluir la empresa, el año y la semana; por ejemplo, `Reporte Camanchaca 2027 Semana 12.xlsx`.
-2. Ejecuta el generador:
+### ⚡ Paso 2: Actualizar la Web desde PowerShell
+Abre PowerShell en la carpeta del proyecto y ejecuta:
+```powershell
+.\generar_reporte.ps1
+```
+Este comando lee los nuevos libros de Excel, procesa las métricas acuícolas por región y genera/actualiza [`reporte_semanal.html`](./reporte_semanal.html).
 
-   ```powershell
-   .\generar_reporte.ps1
-   ```
+### 🌐 Paso 3: Previsualizar e Imprimir a PDF
+1. Abre [`reporte_semanal.html`](./reporte_semanal.html) en Chrome o Edge.
+2. Navega entre las empresas (**Camanchaca**, **Cermaq**, **Mowi**) usando la barra superior.
+3. Revisa métricas, observaciones operativas y el resumen ejecutivo dinámico.
+4. Presiona el botón **🖨️ Guardar PDF / Imprimir** para exportar cada informe.
 
-3. Abre `reporte_semanal.html`, revisa las métricas y usa **Guardar PDF / Imprimir** si necesitas exportarlo desde el navegador.
+---
 
-`reporte_semanal.html` no viene incluido al clonar el repositorio: se crea localmente durante la ejecución porque contiene datos operativos.
-
-El script selecciona automáticamente el archivo más reciente de cada empresa y la primera pestaña distinta de `Consolidado`. De forma predeterminada procesa las tres empresas.
-
-### Comandos disponibles
+## 💡 Opciones del Script
 
 | Objetivo | Comando |
 |---|---|
-| Actualizar el HTML con las tres empresas | `.\generar_reporte.ps1` |
+| Actualizar el dashboard con las tres empresas | `.\generar_reporte.ps1` |
 | Actualizar solo una empresa | `.\generar_reporte.ps1 -Empresa Cermaq` |
-| Generar los tres PDF directamente | `.\generar_reporte.ps1 -GenerarPDF` |
-| Generar el PDF de una empresa | `.\generar_reporte.ps1 -Empresa Mowi -GenerarPDF` |
+| Generar directamente los PDFs vía Microsoft Edge | `.\generar_reporte.ps1 -GenerarPDF` |
+| Generar el PDF de una empresa específica | `.\generar_reporte.ps1 -Empresa Mowi -GenerarPDF` |
 
-Los valores aceptados por `-Empresa` son `Camanchaca`, `Cermaq`, `Mowi` y `Todas`.
+---
 
-## Formato esperado de los Excel
+## 🔒 Privacidad y Plantillas
 
-- El nombre debe contener la empresa y `Semana XX`.
-- Se recomienda incluir también el año, por ejemplo `Reporte Camanchaca 2027 Semana 12.xlsx`.
-- La primera pestaña distinta de `Consolidado` debe corresponder al período que se desea procesar.
-- La fila de encabezados debe estar entre las primeras 10 filas y contener una columna cuyo nombre incluya `Centro`.
-- El generador reconoce encabezados equivalentes a `Región`, `Total de jaulas`, `Cámara por jaula`, `Sin visual`, `Mortalidad sin visual` y `Observaciones`.
-- Una observación vacía o con `-` se transforma en `Sin novedad`.
+* `reporte_semanal.template.html` es la plantilla maestra limpia versionada en Git. Contiene la estructura visual, estilos, gráficos y el branding de Omnifish, pero sin datos operacionales de clientes.
+* `reporte_semanal.html` se crea y actualiza localmente al ejecutar el script y está excluido de Git en `.gitignore` para resguardar la confidencialidad de la información.
+* Los archivos en `Datos_Excel/` y `Reportes_PDF/` también se mantienen fuera de Git.
 
-Si no se puede obtener la semana desde el nombre del archivo ni desde el nombre de la pestaña, el proceso se detiene para evitar generar un reporte con una semana incorrecta.
+---
 
-## Generación directa de PDF
+## 🛠️ Estructura del Proyecto
 
-```powershell
-.\generar_reporte.ps1 -GenerarPDF
 ```
-
-Los documentos se guardan en `Reportes_PDF/Semana_XX/`. El año y la semana se obtienen del nombre del Excel o de la pestaña seleccionada.
-
-## Solución de problemas
-
-### PowerShell impide ejecutar el script
-
-Habilita la ejecución únicamente para la sesión actual y vuelve a intentarlo:
-
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\generar_reporte.ps1
-```
-
-### No se puede iniciar Excel
-
-Comprueba que Microsoft Excel de escritorio esté instalado. Cierra los libros abiertos y elimina únicamente los archivos temporales `~$...xlsx` que hayan quedado bloqueados después de confirmar que Excel está cerrado.
-
-### No se genera el PDF
-
-Comprueba que Microsoft Edge esté instalado en una ubicación estándar o disponible como `msedge.exe` en `PATH`. También puedes abrir `reporte_semanal.html` y usar la opción de impresión del navegador.
-
-### No aparece una empresa en el reporte
-
-Verifica que exista un archivo `.xlsx` con el nombre de la empresa dentro de `Datos_Excel/` y que sus encabezados respeten el formato descrito anteriormente.
-
-## Privacidad de los datos
-
-`reporte_semanal.template.html` contiene únicamente la estructura visual y no incluye información operacional. Al ejecutar el script se crea `reporte_semanal.html` con los datos de los Excel.
-
-Los siguientes elementos se mantienen fuera de Git porque pueden contener información sensible:
-
-- Archivos Excel.
-- Reportes PDF.
-- `reporte_semanal.html` generado.
-- Archivos temporales de renderizado.
-
-Antes de publicar cambios, comprueba siempre `git status` para confirmar que solo se estén incluyendo código, documentación, plantilla y recursos gráficos.
-
-## Estructura
-
-```text
 Generador de Reportes Semanales/
 ├── assets/
 │   └── logos/
-├── Datos_Excel/                    # Entrada local; ignorada por Git
-├── Reportes_PDF/                   # Salida local; ignorada por Git
-├── generar_reporte.ps1             # Procesamiento y generación
-├── reporte_semanal.template.html   # Plantilla versionada sin datos reales
-└── reporte_semanal.html            # Salida generada; ignorada por Git
+│       ├── Camanchaca logo.png
+│       ├── Cermaq logo.jpg
+│       ├── Mowi logo.png
+│       └── Omnifish logo.png
+├── Datos_Excel/                     # Archivos Excel semanales (ignorados en git)
+├── Reportes_PDF/                    # Reportes generados en PDF (ignorados en git)
+├── generar_reporte.ps1              # Script de procesamiento y generación
+├── reporte_semanal.template.html    # Plantilla limpia versionada sin datos de clientes
+└── reporte_semanal.html             # Dashboard generado localmente (ignorado en git)
 ```
