@@ -848,7 +848,7 @@
           const step = Math.floor(200 / numReg);
           bx = 35 + (idx * step);
         }
-        const bh = Math.max(10, Math.round((r.centros / maxCentros) * 70));
+        const bh = (r.centros / maxCentros) * 70;
         const by = 95 - bh;
         const tx = bx + Math.floor(bw / 2);
         const color = barColors[idx % barColors.length];
@@ -882,7 +882,7 @@
           bx = 35 + (idx * step);
         }
         const funcNum = parseFloat((r.func || '100').replace('%', '').replace(',', '.'));
-        const bh = Math.max(10, Math.round((funcNum / 100) * 75));
+        const bh = (funcNum / 100) * 75;
         const by = 95 - bh;
         const tx = bx + Math.floor(bw / 2);
         let fColor = '#00a86b';
@@ -958,8 +958,8 @@
           cx = jx + bw + 3;
           tx = jx + bw;
         }
-        const jh = Math.max(8, Math.round((r.jaulas / maxValJC) * 65));
-        const ch = Math.max(8, Math.round((r.camaras / maxValJC) * 65));
+        const jh = (r.jaulas / maxValJC) * 65;
+        const ch = (r.camaras / maxValJC) * 65;
         const jy = 95 - jh;
         const cy = 95 - ch;
         barsJC += `

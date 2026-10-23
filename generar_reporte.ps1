@@ -150,18 +150,36 @@ foreach ($currentEmpresa in $empresasToProcess) {
         $colCamsPorJaula = 7
         $colSinVisual = 8
         $colMortSinVisual = 9
-        $colObs = 10
+        $colObs = 0
+        $colFuncionamiento = 0
 
         $colCount = $targetSheet.UsedRange.Columns.Count
         for ($c = 1; $c -le $colCount; $c++) {
             $hText = $targetSheet.Cells.Item($headerRow, $c).Text.Trim()
             if ($hText -like "*Observaci*") { $colObs = $c }
+            elseif ($hText -like "*Porcentaje*funcionamiento*") { $colFuncionamiento = $c }
             elseif ($hText -like "*mortalidad*sin visual*") { $colMortSinVisual = $c }
             elseif ($hText -like "*sin visual*") { $colSinVisual = $c }
             elseif ($hText -like "*C*mara*jaula*") { $colCamsPorJaula = $c }
             elseif ($hText -like "*Total*jaula*" -or $hText -like "*Total de jaulas*") { $colJaulas = $c }
             elseif ($hText -like "*Regi*") { $colRegion = $c }
             elseif ($hText -like "*Centro*") { $colCentro = $c }
+        }
+
+        # Algunos libros omiten el encabezado de observaciones, pero mantienen
+        # sus textos inmediatamente después del porcentaje de funcionamiento.
+        if ($colObs -eq 0 -and $colFuncionamiento -gt 0 -and $colFuncionamiento -lt $colCount) {
+            $candidateObs = $colFuncionamiento + 1
+            if ((Get-CellText $targetSheet $headerRow $candidateObs) -eq "") {
+                for ($r = ($headerRow + 1); $r -le $targetSheet.UsedRange.Rows.Count; $r++) {
+                    $candidateValue = $targetSheet.Cells.Item($r, $candidateObs).Value2
+                    if ($candidateValue -is [string] -and $candidateValue.Trim() -ne "") {
+                        $colObs = $candidateObs
+                        Write-Warning "Observaciones sin encabezado: se usa la columna $colObs de '$fechaPestana'."
+                        break
+                    }
+                }
+            }
         }
 
         # Leer filas
@@ -570,7 +588,7 @@ foreach ($currentEmpresa in $empresasToProcess) {
             $bx = 35 + ($ri * $step)
         }
         
-        $bh = [Math]::Max(10, [int][Math]::Round(($rCentros / $maxCentros) * 70))
+        $bh = [Math]::Round(($rCentros / $maxCentros) * 70, 2)
         $by = 95 - $bh
         $tx = $bx + [int]($bw / 2)
         
@@ -619,7 +637,7 @@ $barsCentrosSvg
             $bx = 35 + ($ri * $step)
         }
         
-        $bh = [Math]::Max(10, [int][Math]::Round(($rFunc / 100.0) * 75))
+        $bh = [Math]::Round(($rFunc / 100.0) * 75, 2)
         $by = 95 - $bh
         $tx = $bx + [int]($bw / 2)
         
@@ -706,8 +724,8 @@ $donutGreenStroke
             $tx = $jx + $bw
         }
         
-        $jh = [Math]::Max(8, [int][Math]::Round(($rJau / $maxValJC) * 65))
-        $ch = [Math]::Max(8, [int][Math]::Round(($rCam / $maxValJC) * 65))
+        $jh = [Math]::Round(($rJau / $maxValJC) * 65, 2)
+        $ch = [Math]::Round(($rCam / $maxValJC) * 65, 2)
         $jy = 95 - $jh
         $cy = 95 - $ch
         
